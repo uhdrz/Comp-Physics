@@ -5,7 +5,7 @@
 
 using namespace std;
 
-double system::wavefunc(double x, double w,double y, double A)
+double system::wavefunc(double x, double y,double w, double A)
 {
     double phi= A*hermite(m_nx,sqrt(w)*x)* hermite(m_ny,sqrt(w)*y)*exp(-w*0.5*(pow(x,2)+pow(y,2)));
     return phi;
@@ -14,34 +14,36 @@ double system::wavefunc(double x, double w,double y, double A)
 system::system (int c)
 {
     cut=c;
+    pos=0;
+    m_nx=0;
+    m_ny=0;
+    m_s=0;
 }
 
-int system::numtopos()
-{   int pos=0;
-    int n = m_nx+m_ny;
+void system::numtopos()
+{   int n = m_nx+m_ny;
     int temp=0;
     for (int i =0; i<n; i++)
     {
         temp+= 2*(i+1);
     }
     pos=temp+m_ny+m_s;
-    return pos;
 }
 
 
-void system::postonum(int pos)
+void system::postonum()
 {
     m_s = pos%2;
-    int temp=0;
-    int n=0;
-    for(int i=0; temp< pos; i++)
-    {
-      temp+= 2*(i+1);
-      n=i;
-    }
+    int temp1=0;
+    int temp2=0;
+    int n;
+    for(n=0; temp1< pos; n++)
+    { temp2=temp1;
+      temp1+= 2*(n+1);
+     }
 
-    m_ny=pos-m_s-temp;
-    m_nx=n-m_ny;
+    m_ny=pos-m_s-temp2;
+    m_nx=n-1-m_ny;
 
 
     //return m, nx,ny;
@@ -72,23 +74,16 @@ double system::hermite(int n, double x)
 }
 
 
-int system::cutoff(int n1, int n2, int cut_test)
-{
-    if((n1+n2<=cut_test))
-    {
-        return 1;
-    }
-    else {return 0;};
-}
 
 
 void system::get(int x, int y, int m)
-{ int test= cutoff(x,y, cut);
-    if(test==1){
-    m_nx=x;
-    m_ny=y;
-    m_s=m;}
-    else{cout<<"CUTOFF!!!";}
+{    if((x+y<=cut))
+    {
+        m_nx=x;
+        m_ny=y;
+        m_s=m;
+    }
+     else{cout<<"CUTOFF!!!";}
 }
 
 
@@ -99,7 +94,13 @@ void system::genstate()
     for (int i =0; i<cut; i++)
     {
         temp+= 2*(i+1);
-    }
+    };
+    state{new int[temp]};
+    for(int i=0;i<temp; i++)
+    {
+        state[i]=0;
+    };
+    state[pos]=1;
 
 
 }

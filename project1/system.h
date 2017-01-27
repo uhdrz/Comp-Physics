@@ -1,25 +1,27 @@
 #ifndef SYSTEM_H
 #define SYSTEM_H
+#include <stdlib.h>
 
+using namespace std;
 
 class system
 {
 public:
     system(int c);
-    int state[];
+    unique_ptr<int[]> state;
     int cut, m_nx, m_ny, m_s;
-    int numtopos();
-    void postonum(int pos);
+    int pos;
+    void numtopos();
+    void postonum();
     double hermite (int n, double x);
-    double wavefunc (double x, double w,double y, double A);
+    double wavefunc (double x, double y, double w, double A);
     void genstate();
-    int cutoff(int n1, int n2, int cut_test);
     void get (int x, int y, int ms);
 
 };
 
 
-
+/*destruktor*, genstate/
 
 
 #endif // SYSTEM_H
