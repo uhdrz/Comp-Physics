@@ -1,6 +1,7 @@
 #include "system.h"
 #include <cmath>
 #include <iostream>
+#include <vector>
 #include <stdlib.h>
 
 using namespace std;
@@ -11,13 +12,13 @@ double system::wavefunc(double x, double y,double w, double A)
     return phi;
 }
 
-system::system (int c)
+system::system (int n_x, int n_y, int s,int c)
 {
     cut=c;
     pos=0;
-    m_nx=0;
-    m_ny=0;
-    m_s=0;
+    m_nx=n_x;
+    m_ny=n_y;
+    m_s=s;
 }
 
 void system::numtopos()
@@ -95,7 +96,7 @@ void system::genstate()
     {
         temp+= 2*(i+1);
     };
-    state{new int[temp]};
+    state.reserve(temp);
     for(int i=0;i<temp; i++)
     {
         state[i]=0;
@@ -103,4 +104,12 @@ void system::genstate()
     state[pos]=1;
 
 
+}
+
+void system::print()
+{
+    cout<<"Single Quantum State :"<<endl;
+    cout<<"n_x="<<m_nx<<"  n_y="<<m_ny<<endl;
+    cout<<"s_z ="<<m_s<< "Cut-off energy="<<cut<<endl;
+    cout<<"Position"<<pos;
 }
