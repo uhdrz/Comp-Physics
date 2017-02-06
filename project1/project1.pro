@@ -4,9 +4,7 @@ CONFIG -= app_bundle
 CONFIG -= qt
 
 SOURCES += main.cpp \
-    quantumnumbers.cpp \
-    system.cpp
+    hattree.cpp
 
 HEADERS += \
-    quantumnumbers.h \
-    system.h
+    hattree.h

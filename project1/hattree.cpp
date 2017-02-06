@@ -12,13 +12,13 @@ double system::wavefunc(double x, double y,double w, double A)
     return phi;
 }
 
-system::system (int n_x, int n_y, int s,int c)
+system::system (int c)
 {
     cut=c;
     pos=0;
-    m_nx=n_x;
-    m_ny=n_y;
-    m_s=s;
+    m_nx=0;
+    m_ny=0;
+    m_s=0;
 }
 
 void system::numtopos()
@@ -83,28 +83,24 @@ void system::get(int x, int y, int m)
         m_nx=x;
         m_ny=y;
         m_s=m;
+        numtopos();
+        int temp=0;
+        for (int i =0; i<cut; i++)
+        {
+            temp+= 2*(i+1);
+        };
+        state.reserve(temp);
+        for(int i=0;i<temp; i++)
+        {
+            state[i]=0;
+        };
+        state[pos]=1;
     }
      else{cout<<"CUTOFF!!!";}
 }
 
 
 
-void system::genstate()
-{
-    int temp=0;
-    for (int i =0; i<cut; i++)
-    {
-        temp+= 2*(i+1);
-    };
-    state.reserve(temp);
-    for(int i=0;i<temp; i++)
-    {
-        state[i]=0;
-    };
-    state[pos]=1;
-
-
-}
 
 void system::print()
 {
