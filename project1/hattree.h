@@ -2,6 +2,7 @@
 #define hattree_H
 #include <stdlib.h>
 #include <vector>
+#include <omp.h>
 
 using namespace std;
 
@@ -28,7 +29,9 @@ public:
     void GaussHermiteQuadrature(double *x, double *w, int n);
     double potential (double x1, double x2, double y1, double y2);
     double Integration(int n,class hattree p,class hattree q,class hattree r, class hattree s); /*<pq|V|rs>*/
-    double ASMatrixElement(int n,class hattree p,class hattree q,class hattree r, class hattree s);/*<pq|V|rs>-<pq|V|sr>*/
+    double ASMatrixElement(int n,class hattree p,class hattree q,class hattree r, class hattree s);
+    /*<pq|V|rs>-<pq|V|sr>*/
+    double GaussHermiteIntegration(int n);
 
 
 
