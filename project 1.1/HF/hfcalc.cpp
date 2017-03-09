@@ -29,14 +29,15 @@ HFcalc::HFcalc(int n, int level, double w)
     m_fermilevel=i-1;  //starts with 0, so i energy level
 
 
-    m_numofpossstates=m_levels*(m_levels+1);
+    m_numofpossstates=m_levels*(m_levels+1); //number of possible states
 
 
-    m_obelements.zeros(m_numofpossstates);
-    m_hfenergy.zeros(m_numofpossstates);
+    m_obelements.zeros(m_numofpossstates);  // non perturbed energies
+
+    m_hfenergy.zeros(m_numofpossstates);  //Hattree-Fock energy
 
 
-    for(int i=0;i<m_natoms; i++)
+    for(int i=0;i<m_natoms; i++)         //generating unperturbed energies
       {
           if(i<=1){
               m_obelements(i)=m_w;}
@@ -116,7 +117,7 @@ vector<double> HFcalc::codec(int i){
 
 
 
-double HFcalc::compRefenergy(){
+/*double HFcalc::compRefenergy(){
     double E=0;
     double w=m_w;
 
@@ -145,14 +146,14 @@ double HFcalc::compRefenergy(){
 return E;
 
 
-        }
+        }*/
 
 
 
 
 
 void HFcalc::compDensity(){
-    //doppelte durch spin??? sieh ref energy....
+
 
     for(int g=0;g<m_numofpossstates;g++){
         for(int  d=0;d<m_numofpossstates;d++){
@@ -217,11 +218,11 @@ void HFcalc::compFock(){
                 sum+=m_obelements(a);
             }
             m_HF(a,b)=sum;
-            cout<<m_HF(a,b)<<' ';
+           // cout<<m_HF(a,b)<<' ';
 
 
         }
-        cout<<endl;
+        //cout<<endl;
 
     }
 
@@ -241,12 +242,12 @@ void HFcalc::diagonalize(){
 double HFcalc::compHFenergy(int n){
     double lambda= pow(10,-8);
     int counter=0;
-    double deltaE=100;
+    double deltaE=100;  //start value to enter the loop
 
     vec temp=zeros<vec>(m_numofpossstates);
 
 
-    while(deltaE/m_numofpossstates>lambda && counter<n){
+    while(deltaE/m_numofpossstates>lambda && counter<n){  //loop until it reaches small enough energy difference or number of steps
 
 
         deltaE=0;
@@ -269,17 +270,6 @@ double HFcalc::compHFenergy(int n){
    /* for(int i=0; i<m_numofpossstates;i++){
         cout<<m_hfenergy(i)<<' ';
     }*/
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -315,10 +305,6 @@ double HFcalc::compHFenergy(int n){
                          E0hf+=0.5*m_C(i,a)*m_C(i,b)*m_C(j,g)*m_C(j,d)*Coulomb_HO(w,na,ma,nb,mb,nd,md,ng,mg);
 
                     }
-
-
-
-
 
 
                    }

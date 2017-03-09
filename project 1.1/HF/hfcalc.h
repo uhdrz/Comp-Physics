@@ -26,7 +26,7 @@ public:
     mat m_rho;
     mat m_HF;
     int degeneracy(int n);
-    double compRefenergy();
+    //double compRefenergy();
     void compDensity();
     void compFock();
     double compHFenergy(int n);
