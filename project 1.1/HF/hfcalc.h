@@ -26,14 +26,12 @@ public:
     mat m_rho;
     mat m_HF;
     int degeneracy(int n);
-    //double compRefenergy();
     void compDensity();
     void compFock();
     double compHFenergy(int n);
     void diagonalize();
     vector<double> codec(int i);
-    double KroneckerDelta(int i, int j);
-    double Energy();
+
 };
 
 #endif // HFCALC_H
