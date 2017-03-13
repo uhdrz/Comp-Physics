@@ -11,25 +11,33 @@ using namespace std;
 int main(/*int argc, char *argv[]*/)
 {
 
-HFcalc a(6,4,1);
+    HFcalc a(6,4,1);
 
-
-/*for(int i=0;i<12;i++){
+    /*
+    for(int i=0;i<12;i++){
     for(int j=0;j<3;j++){
-    cout << a.codec(i)[j] ;
-};
-    cout <<endl;}*/
+        cout << a.codec(i)[j];
+        cout << endl;
 
-a.compDensity();
-a.compFock();
-//a.diagonalize();
-//double E=a.compHFenergy(10000);
+        }
+     cout << "******" << endl;
+    }
+    */
 
-//cout<<E;
+    for(int i=0; i<10; i++) {
+        a.compDensity();
+        a.compFock();
+        a.diagonalize();
+    }
 
+    cout << a.Energy() << endl;
 
+    //a.m_HF.print();
+    //a.m_hfenergy.print();
 
+    //a.diagonalize();
+    //double E=a.compHFenergy(100);
 
-
-
+    //cout<<E << endl;
 }
+

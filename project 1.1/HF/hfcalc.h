@@ -32,6 +32,8 @@ public:
     double compHFenergy(int n);
     void diagonalize();
     vector<double> codec(int i);
+    double KroneckerDelta(int i, int j);
+    double Energy();
 };
 
 #endif // HFCALC_H
