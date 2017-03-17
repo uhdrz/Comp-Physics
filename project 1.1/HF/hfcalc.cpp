@@ -14,13 +14,7 @@ HFcalc::HFcalc(int n, int level, double w)
     m_natoms=n;
     m_levels=level;
     m_w=w;
-    int temp=0;
-    int i=0;
-    for (; temp<m_natoms; i++)
-    {
-        temp+=2*(i+1);
-    };
-    m_fermilevel=i-1;  //starts with 0, so i energy level
+
 
 
     m_numofpossstates=m_levels*(m_levels+1); //number of possible states
@@ -31,19 +25,11 @@ HFcalc::HFcalc(int n, int level, double w)
     m_hfenergy.zeros(m_numofpossstates);  //Hattree-Fock energy
 
 
-    for(int i=0;i<m_numofpossstates; i++)         //generating unperturbed energies
-    {
-        if(i<=1){
-            m_obelements(i)=1.0*m_w;}
-        else if(i<6 && i>=2){
-            m_obelements(i)=2.0*m_w;}
-        else if(i<12 && i>=6){
-            m_obelements(i)=3.0*m_w;
-        }
-        else if(i<20 && i>=12){
-            m_obelements(i)=4.0*m_w;
-        }
-        else  m_obelements(i)=0;
+    for(int i=0;i<m_levels; i++)         //generating unperturbed energies
+    {       for(int j=i*(i+1);j<(i+1)*(i+2);j++){
+
+            m_obelements(j)=(i+1.)*m_w;}
+
 
     };
 
@@ -198,7 +184,7 @@ double HFcalc::compHFenergy(int n){
 
 
 
-    while( abs(m_hfenergy-temp).max() >lambda && counter<n){  //loop until it reaches small enough energy difference or number of steps
+    while( abs(m_hfenergy-temp).max() >lambda ){  //loop until it reaches small enough energy difference or number of steps && counter<n
 
 
         compDensity();

@@ -11,7 +11,7 @@ using namespace std;
 int main(/*int argc, char *argv[]*/)
 {
 
-    HFcalc a(6,3,1);
+    HFcalc a(20,5,1);
 
 
 

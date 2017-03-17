@@ -17,7 +17,6 @@ public:
     HFcalc(int n, int level, double w);
     int m_natoms; //number of electrons
     int m_levels;
-    int m_fermilevel;
     int m_numofpossstates;
     vec m_obelements;
     vec m_hfenergy;
