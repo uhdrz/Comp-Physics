@@ -87,7 +87,15 @@ vector<double> HFcalc::codec(int i){
 
 
 
+void HFcalc::codectest(){
+    for(int i=0; i< m_numofpossstates; i++){
+        for(int j=0; j <3;j++){
+            cout<< codec(i)[j];
+        }
+                   cout<<endl;
+    }
 
+}
 
 
 
@@ -172,7 +180,7 @@ void HFcalc::diagonalize(){
 
 }
 
-double HFcalc::compHFenergy(int n){
+double HFcalc::compHFenergy(int n, bool test){
     double lambda= pow(10,-8);
     int counter=1;
 
@@ -184,7 +192,7 @@ double HFcalc::compHFenergy(int n){
 
 
 
-    while( abs(m_hfenergy-temp).max() >lambda ){  //loop until it reaches small enough energy difference or number of steps && counter<n
+    while( abs(m_hfenergy-temp).max() >lambda && counter<n ){  //loop until it reaches small enough energy difference or number of steps
 
 
         compDensity();
@@ -201,11 +209,15 @@ double HFcalc::compHFenergy(int n){
 
     cout << counter << endl;
 
+    if(test){                                //test for unitarity of m_C
+    mat abs= m_C*m_C.t();
+    abs.print();}
+
 
 
     double E0hf=0;
     double w=m_w;
-    //m_hfenergy.print();
+    m_hfenergy.print();
     for(int i=0; i<m_natoms;i++){
         E0hf+=m_hfenergy(i);
         for (int j=0; j<m_natoms;j++){

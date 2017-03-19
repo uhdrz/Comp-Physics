@@ -11,14 +11,17 @@ using namespace std;
 int main(/*int argc, char *argv[]*/)
 {
 
-    HFcalc a(20,5,1);
+    HFcalc a(6,4,1);
 
 
 
 
 
 
-    double E=a.compHFenergy(100);
+
+
+
+    double E=a.compHFenergy(100,0);
 
     cout<<E << endl;
 

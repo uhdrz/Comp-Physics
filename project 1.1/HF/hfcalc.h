@@ -27,9 +27,10 @@ public:
     int degeneracy(int n);
     void compDensity();
     void compFock();
-    double compHFenergy(int n);
+    double compHFenergy(int n, bool test);
     void diagonalize();
     vector<double> codec(int i);
+    void codectest();
 
 };
 
