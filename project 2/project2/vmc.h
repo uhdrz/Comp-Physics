@@ -19,6 +19,7 @@ public:
     double wavefunction (mat &r);
     double localEnergyder( mat &r);
     double localEnergyana(mat &r);
+    void test();
     void MonteCarlo();
     mat m_rold;
     mat m_rnew;

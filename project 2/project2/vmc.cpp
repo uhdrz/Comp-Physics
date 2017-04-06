@@ -42,7 +42,7 @@ double VMC::wavefunction(mat &r){
     }
 
 
-    double phi= exp(-0.5*m_w*sum );
+    double phi= exp(-0.5*m_w*m_alpha*sum );
 
     return phi;
 
@@ -62,9 +62,16 @@ double VMC::localEnergyana(mat &r){
         }
 
     }
+    double abs=(r(0,0)-r(1,0))*(r(0,0)-r(1,0))+(r(0,1)-r(1,1))*(r(0,1)-r(1,1));
+    double overr=sqrt(1/abs);
 
 
-    double Elocal=0.5*m_w*m_w*(1-m_alpha*m_alpha)*sum+2*m_alpha*m_w;
+
+
+
+
+
+    double Elocal=0.5*m_w*m_w*(1-m_alpha*m_alpha)*sum+2*m_alpha*m_w+overr;
     return Elocal;
 
 }
@@ -84,8 +91,10 @@ double VMC::localEnergyder(mat &r){
     double wfc=wavefunction(r);
     double deriv=0;
 
+
+
     for (int i=0; i< m_nelectrons;i++){
-        for(int j=0; i<2;j++){
+        for(int j=0; j<2;j++){
             rp(i,j)+=h;
             rm(i,j)-=h;
             wfm=wavefunction(rm);
@@ -94,8 +103,8 @@ double VMC::localEnergyder(mat &r){
             rp(i,j)=r(i,j);
             rm(i,j)=r(i,j);
 
-        }
-    }
+        }}
+
     double Elocal=-0.5*deriv/(wfc*h*h);
 
     return Elocal;
@@ -103,7 +112,16 @@ double VMC::localEnergyder(mat &r){
 }
 
 
+void VMC::test(){
+    mat r=zeros<mat>(m_nelectrons,2);
+    double Elder=localEnergyder(r);
+    double Elana=localEnergyana(r);
+    cout<<Elder<<endl;
+    cout<<Elana<<endl;
 
+
+
+}
 
 void VMC::MonteCarlo(){
 
