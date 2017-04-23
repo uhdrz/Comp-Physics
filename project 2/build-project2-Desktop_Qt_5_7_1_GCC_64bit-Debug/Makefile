@@ -36,7 +36,7 @@ DISTNAME      = project21.0.0
 DISTDIR = /home/oliver/Documents/Github/Comp-Physics/project\ 2/build-project2-Desktop_Qt_5_7_1_GCC_64bit-Debug/.tmp/project21.0.0
 LINK          = g++
 LFLAGS        = 
-LIBS          = $(SUBLIBS)  
+LIBS          = $(SUBLIBS) -llapack -lblas -larmadillo 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -183,6 +183,7 @@ DIST          = /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/spec_pre.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/qt_config.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/linux-g++/qmake.conf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/spec_post.prf \
+		../project2/.qmake.stash \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/exclusive_builds.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/toolchain.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/default_pre.prf \
@@ -339,6 +340,7 @@ Makefile: ../project2/project2.pro /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/linux
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/qt_config.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/linux-g++/qmake.conf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/exclusive_builds.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/toolchain.prf \
 		/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/default_pre.prf \
@@ -484,6 +486,7 @@ Makefile: ../project2/project2.pro /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/linux
 /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/qt_config.prf:
 /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/linux-g++/qmake.conf:
 /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/spec_post.prf:
+.qmake.stash:
 /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/exclusive_builds.prf:
 /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/toolchain.prf:
 /home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/features/default_pre.prf:
@@ -540,7 +543,7 @@ compiler_clean:
 
 ####### Compile
 
-main.o: ../project2/main.cpp 
+main.o: ../project2/main.cpp ../project2/vmc.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../project2/main.cpp
 
 vmc.o: ../project2/vmc.cpp ../project2/vmc.h

@@ -25,6 +25,7 @@ VMC::VMC(int n, int cycles, double step, double w)
     m_beta=1;
     m_rold.zeros(m_nelectrons,2);
     m_rnew.zeros(m_nelectrons,2);
+    m_dt=0.01;
 
 
 }
@@ -62,7 +63,18 @@ double VMC::localEnergyana(mat &r){
         }
 
     }
-    double abs=(r(0,0)-r(1,0))*(r(0,0)-r(1,0))+(r(0,1)-r(1,1))*(r(0,1)-r(1,1));
+    double abs=0;
+
+    for(int i=0; i<m_nelectrons-1;i++){
+        for(int j=i+1; j<m_nelectrons;j++){
+            double temp=0;
+            for(int d=0; d<2; d++){
+                temp+=(r(i,d)-r(j,d))*(r(i,d)-r(j,d));
+            }
+             abs+=temp;
+            }
+        }
+
     double overr=sqrt(1/abs);
 
 
@@ -122,6 +134,153 @@ void VMC::test(){
 
 
 }
+
+
+vec VMC::SteepestDescend(mat A, vec b, vec x0){
+    int IterMax, i;
+    int dim = x0.n_elem;
+    const double tolerance = 1.0e-14;
+    vec x = zeros<vec>(dim);
+    vec f = zeros<vec>(dim);
+    vec z = zeros<vec>(dim);
+    double c =0;
+    double alpha=0;
+    IterMax = 30;
+    x = x0;
+    f = A*x-b;
+    i = 0;
+    while(i <= IterMax){
+        z = A*f;
+        c = dot(f,f);
+        alpha = c/dot(f,z);
+        x = x - alpha*f;
+        f = A*x-b;
+        if(sqrt(dot(f,f)) < tolerance) break;
+        i++;
+
+         }
+    return x;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/*void VMC::MCH(){
+    random_device rnd;
+    mt19937 gen(rnd());
+    normal_distribution <>dis(0,1);
+    dis(gen);
+
+
+    mat rold=zeros<mat>(m_nelectrons,2);
+    mat rnew=zeros<mat>(m_nelectrons,2);
+    double wfold=0;
+    double wfnew=0;
+    double sum=0;
+    double sumsquared=0;
+
+    for(int i=0;i<m_nelectrons;i++){
+        for(int j=0;j<2;j++){
+            rold(i,j)=dis(gen)*sqrt(m_dt);
+        }
+    }
+
+    rnew=rold;
+    for(int n=0;n<m_cycles;n++){
+        wfold=wavefunction(rold);
+        vec F=2*Ableitung(rold); ///////////////////////////////////////////////////////////
+        for(int i=0;i<m_nelectrons;i++){
+                    for(int j=0;j<2;j++){
+                        rnew(i,j)=rold(i,j)+0.5*F(j)*m_dt+dis(gen)*sqrt(m_dt);
+
+                  }
+
+            wfnew=wavefunction(rnew);
+            double q=(Green(rold, rnew)*wfnew*wfnew)/(wfold*wfold*Green(rnew, rold));
+            if(dis(gen)<=q){
+                for(int j=0;j<2;j++){
+                    rold(i,j)=rnew(i,j);
+                    wfold=wfnew;
+                }
+            }
+            else{
+                for(int j=0; j<0;j++){
+                    rnew(i,j)=rold(i,j);
+                }
+            }
+            double temp=localEnergyana(rnew);
+            sum+=temp;
+            sumsquared+=temp*temp;
+
+        }
+
+    }
+
+    double energy=sum/(m_cycles*m_nelectrons);
+    double energysquared=sumsquared/(m_cycles*m_nelectrons);
+    double variance=energysquared- energy*energy;
+
+
+
+
+    cout<< "Energy"<< energy<<endl;
+    cout<< "Variance"<< variance<<endl;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}*/
+
+
+
+/*double VMC::Green(mat &r1, mat &r2){
+
+    vec F=2*Ableitung(rold);
+    double constant =pow(2*M_PI*m_dt,1.5*m_nelectrons);
+    double dr2=0;
+    for(int i=0; i<m_nelectrons-1;i++){
+            double temp=0;
+            for(int d=0; d<2; d++){
+                temp+=(r1(i,d)-r2(i,d)-0.5*m_dt*F(d))*(r1(i,d)-r2(i,d)-0.5*m_dt*F(d));
+            }
+             dr2+=temp;
+
+        }
+
+
+
+    double G=(1/constant)*exp(-(dr2/(2*m_dt)));
+    return G;
+
+
+
+
+}*/
 
 void VMC::MonteCarlo(){
 

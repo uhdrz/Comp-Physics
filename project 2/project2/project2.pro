@@ -8,3 +8,6 @@ SOURCES += main.cpp \
 
 HEADERS += \
     vmc.h
+
+
+LIBS += -llapack -lblas -larmadillo
