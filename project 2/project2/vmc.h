@@ -25,7 +25,7 @@ public:
     void MonteCarlo();
     mat m_rold;
     mat m_rnew;
-    vec SteepestDescend(mat A, vec b, vec x0);
+    void SteepestDescend(mat A, vec b, vec x0);
     int m_cycles;
     int m_nelectrons;
     double m_w;

@@ -136,30 +136,30 @@ void VMC::test(){
 }
 
 
-vec VMC::SteepestDescend(mat A, vec b, vec x0){
-    int IterMax, i;
-    int dim = x0.n_elem;
+void VMC::SteepestDescend(mat A, vec b, vec x0){
+    int IterMax=10000;
+    int i=0;
     const double tolerance = 1.0e-14;
-    vec x = zeros<vec>(dim);
-    vec f = zeros<vec>(dim);
-    vec z = zeros<vec>(dim);
-    double c =0;
-    double alpha=0;
-    IterMax = 30;
-    x = x0;
-    f = A*x-b;
-    i = 0;
-    while(i <= IterMax){
-        z = A*f;
-        c = dot(f,f);
-        alpha = c/dot(f,z);
-        x = x - alpha*f;
-        f = A*x-b;
-        if(sqrt(dot(f,f)) < tolerance) break;
-        i++;
+    double aold=0;
+    double anew=0;
+    double bold=0;
+    double bnew=0;
+    double diffa=0;
+    double diffb=0;
 
-         }
-    return x;
+    while(diffa>tolerance & diffb>tolerance||i<IterMax){ /////////////////////
+
+
+        anew=aold+m_step*Ableitung(aold);
+        bnew=bold+m_step*Ableitung(bold);
+
+        diffa=anew-aold;
+        diffb=bnew-bold;
+        i++;
+    }
+
+    m_alpha=anew;
+    m_beta=bnew;
 
 
 }
