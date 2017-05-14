@@ -21,27 +21,18 @@ VMC::VMC(int n, int cycles, double step, double w)
     m_cycles=cycles;
     m_step=step;
     m_w=w;
-    m_alpha=1;
-    m_beta=1;
     m_rold.zeros(m_nelectrons,2);
     m_rnew.zeros(m_nelectrons,2);
     m_dt=0.01;
     m_a=1;
-    m_insteepestdesc=false;
-    m_localE=0;
-    m_localE2=0;
-    m_dE=zeros<vec>(2);
+    m_localEn=zeros<vec>(2);
+    m_varpar={1,0.3}; //0=alpha, 1 =beta
 
-
-}
-
-void VMC::resetvalues(){
-    m_localE=0;
-    m_insteepestdesc=false;
 
 
 
 }
+
 
 double VMC::wavefunction(mat &r){
     //first index particle, second dimension
@@ -54,7 +45,7 @@ double VMC::wavefunction(mat &r){
     }
 
 
-    double phi= exp(-0.5*m_w*m_alpha*sum );
+    double phi= exp(-0.5*m_w*m_varpar(0)*sum );
 
     return phi;
 
@@ -62,29 +53,38 @@ double VMC::wavefunction(mat &r){
 }
 
 
-vec VMC::Quantumforce(mat &r){
-    vec F=zeros<vec>(2);
-    double abs=0;
 
-    for(int i=0; i<m_nelectrons-1;i++){
-        for(int j=i+1; j<m_nelectrons;j++){
-            double temp=0;
-            for(int d=0; d<2; d++){
-                temp+=(r(i,d)-r(j,d))*(r(i,d)-r(j,d));
-            }
-             abs+=temp;
-            }
+
+
+mat VMC::Quantumforce(mat &r){
+    mat F=zeros(m_nelectrons,2);
+
+
+    for(int i=0;i<m_nelectrons;i++){
+        for(int j=0;j<2;j++){
+            double spart=r(i,j)*m_varpar(0);
+
+            double jpart=0;
+
+            for(int k=0;k<m_nelectrons;k++){
+                if(i!=k){
+
+                    double r_ik=relDis(r,i, k);
+
+                    jpart +=(r(i,j)-r(k,j))/(r_ik*pow(1+m_varpar(1)*r_ik,2));
+
+               }
+              }
+
+            F(i,j)=2*(spart+jpart);
+
+
         }
-    double rdiff=sqrt(abs);
+    }
 
 
 
-
-    F(1)=2*m_a(r(1,1)-r(2,1))/((1+m_beta*rdiff)*(1+m_beta*rdiff)*rdiff)-2*m_alpha*m_w*r(1,1);
-    F(2)=2*m_a(r(1,2)-r(2,2))/((1+m_beta*rdiff)*(1+m_beta*rdiff)*rdiff)-2*m_alpha*m_w*r(1,1);
-
-
-    return F;
+     return F;
 }
 
 double VMC::localEnergyana(mat &r){
@@ -92,24 +92,17 @@ double VMC::localEnergyana(mat &r){
 
     double sum=0;
     for(int i=0;i<m_nelectrons;i++){
-        for(int j=0;j<2;j++){
-            sum+=r(i,j)*r(i,j);
-        }
-
+        sum+=pos2(r,i);
     }
-    double abs=0;
 
+    double abs=0;
     for(int i=0; i<m_nelectrons-1;i++){
         for(int j=i+1; j<m_nelectrons;j++){
-            double temp=0;
-            for(int d=0; d<2; d++){
-                temp+=(r(i,d)-r(j,d))*(r(i,d)-r(j,d));
-            }
-             abs+=temp;
+            abs+=relDis(r,i,j);
             }
         }
 
-    double overr=sqrt(1/abs);
+    double overr=1/abs; //careful for nele<2
 
 
 
@@ -117,7 +110,7 @@ double VMC::localEnergyana(mat &r){
 
 
 
-    double Elocal=0.5*m_w*m_w*(1-m_alpha*m_alpha)*sum+2*m_alpha*m_w+overr;
+    double Elocal=0.5*m_w*m_w*(1-m_varpar(0)*m_varpar(0))*sum+2*m_varpar(0)*m_w+overr;
     return Elocal;
 
 }
@@ -177,46 +170,56 @@ void VMC::test(){
 
 
 
-void VMC::MCH(int cycles){
+void VMC::MCH(){
     random_device rnd;
     mt19937 gen(rnd());
-    normal_distribution <>dis(0,1);
-    dis(gen);
+    normal_distribution <double>norm(0,1);
+    uniform_real_distribution <double>uni(0,1);
+
+
 
 
     mat rold=zeros<mat>(m_nelectrons,2);
     mat rnew=zeros<mat>(m_nelectrons,2);
     double wfold=0;
     double wfnew=0;
-    double sumEn=0;
-    double sumsquaredEn=0;
+    double sum=0;
+    double sumsquared=0;
 
-    double sumPsia=0;
-    double sumPsi_localEa=0;
-    double sumPsib=0;
-    double sumPsi_localEb=0;
+
+
+
+
 
 
 
     for(int i=0;i<m_nelectrons;i++){
         for(int j=0;j<2;j++){
-            rold(i,j)=dis(gen)*sqrt(m_dt);
+            rold(i,j)=norm(gen)*sqrt(m_dt);
         }
     }
 
     rnew=rold;
-    for(int n=0;n<cycles;n++){
+    for(int n=0;n<m_cycles;n++){
         wfold=wavefunction(rold);
-        vec F=Quantumforce(rold);
+        mat Qforceold=Quantumforce(rold);
         for(int i=0;i<m_nelectrons;i++){
-                    for(int j=0;j<2;j++){
-                        rnew(i,j)=rold(i,j)+0.5*F(j)*m_dt+dis(gen)*sqrt(m_dt);
+            for(int j=0;j<2;j++){
+                rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
 
-                  }
+          }
 
             wfnew=wavefunction(rnew);
-            double q=(Green(rold, rnew)*wfnew*wfnew)/(wfold*wfold*Green(rnew, rold));
-            if(dis(gen)<=q){
+            mat Qforcenew=Quantumforce(rnew);
+            double G=0;
+            for(int j=0; j<2;j++){
+                G += 0.5*(Qforcenew(i,j)+Qforceold(i,j))*(0.25*m_dt*(Qforceold(i,j)-Qforcenew(i,j))-rnew(i,j)+rold(i,j));
+
+            }
+            G=exp(G);
+
+            if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){
+
                 for(int j=0;j<2;j++){
                     rold(i,j)=rnew(i,j);
                     wfold=wfnew;
@@ -228,71 +231,25 @@ void VMC::MCH(int cycles){
                 }
             }
 
-            double abs=0;
-            double add=0;
-            for(int i=0; i<m_nelectrons-1;i++){
-                for(int j=i+1; j<m_nelectrons;j++){
-                    double temp=0;
-                    for(int d=0; d<2; d++){
-                        temp+=(rnew(i,d)-rnew(j,d))*(rnew(i,d)-rnew(j,d));
-                    }
-                     abs+=temp;
-                    }
-                }
+            double r12=relDis(rnew, 0,1);
+            double den=1/(1+m_varpar(1)*r12);
+            double l1=.5*m_w*m_w*(pos2(rnew,0)+pos2(rnew,1))*(1-m_varpar(0)*m_varpar(0))+2*m_varpar(0)*m_w+1/r12;
+            double l2=2*m_varpar(0)*m_varpar(0)*m_w*m_w*(pos2(rnew,0)+pos2(rnew,1))-4*m_w*m_varpar(0)-2*m_a*m_varpar(0)*m_w*r12*den*den+2*m_a*den*den*(m_a*den*den+1/r12-2*m_varpar(1)*den);
 
-
-            for(int i=0;i<m_nelectrons;i++){
-                for(int j=0;j<2;j++){
-                    add+=rnew(i,j)*rnew(i,j);
-                }
-
-            }
-
-
-            double rdiff=sqrt(abs);
-            double beta_r=1+m_beta*rdiff;
-            double overbeta=1/beta_r;
-
-
-            double tempE=m_alpha*m_alpha*m_w*m_w*add-4*m_alpha*m_w-2*m_a*m_alpha*m_w*rdiff*overbeta*overbeta*(m_a*overbeta*overbeta+1/rdiff-2*m_beta*overbeta);
-
-
-            sumEn+=tempE;
-            sumsquaredEn+=tempEn*tempEn;
-
-
-
-            if(m_insteepestdesc){
-               double tempPsia=-0.5*m_w*add;
-               double tempPsib=-m_a*rdiff*rdiff*overbeta*overbeta;
-               sumPsia+=tempPsia;
-               sumPsib+=tempPsib;
-               sumPsi_localEa=tempPsia*tempE;
-               sumPsi_localEb=tempPsib*tempE;
-
-
-            }
-
+            double temp=l1+l2;
+            sum+=temp;
+            sumsquared+=temp*temp;
 
         }
 
     }
-    m_localE=sumEn/(cycles*m_nelectrons);
-    if(m_insteepestdesc){
-        double Psia=sumPsia/(cycles*m_nelectrons);
-        double Psib=sumPsib/(cycles*m_nelectrons);
-        double Psi_locala=sumPsi_localEa/(cycles*m_nelectrons);
-        double Psi_localb=sumPsi_localEb/(cycles*m_nelectrons);
-        m_dE(1)=2*(Psi_locala-Psia*m_localE);
-        m_dE(2)=2*(Psi_localb-Psib*m_localE);
+    int samples=m_cycles*m_nelectrons;
+    m_localEn(0)=sum/samples;
+    m_localEn(1)=sumsquared/samples;
 
-
-    }
-
-
-
-
-    m_localE2=energysquared=sumsquaredEn/(cycles*m_nelectrons);
+    double variance=m_localEn(1)-m_localEn(0)*m_localEn(0);
+    m_localEn.print();
+    cout<<variance;
 
 
 
@@ -300,29 +257,7 @@ void VMC::MCH(int cycles){
 
 
 
-double VMC::Green(mat &r1, mat &r2){
 
-    vec F=Quantumforce(rold);
-    double constant =pow(2*M_PI*m_dt,1.5*m_nelectrons);
-    double dr2=0;
-    for(int i=0; i<m_nelectrons-1;i++){
-            double temp=0;
-            for(int d=0; d<2; d++){
-                temp+=(r1(i,d)-r2(i,d)-0.5*m_dt*F(d))*(r1(i,d)-r2(i,d)-0.5*m_dt*F(d));
-            }
-             dr2+=temp;
-
-        }
-
-
-
-    double G=(1/constant)*exp(-(dr2/(2*m_dt)));
-    return G;
-
-
-
-
-}
 
 void VMC::MonteCarlo(){
 
@@ -399,33 +334,127 @@ void VMC::MonteCarlo(){
 
 
 void VMC::findoptParameter(){
-    int iteration=1000;
+    int updates=100;
     int cycles=10000;
-    int i=0;
-    const double tolerance = 1.0e-14;
-    vec parold=zeros<vec>(2);
+    vec dE=zeros<vec>(2);
+    double tolerance = 1.0e-14;
+    vec parold={1,0};
     vec parnew=zeros<vec>(2);
     double diff=0;
-    m_insteepestdesc=true;
-    while(i<iteration &tolerance<diff){
 
-       MCH(cycles);
-       parnew=parold-m_step*m_dE;
-       diff= sqrt(dot(parnew-parold,parnew-parold));
-       i++;
-    }
 
+
+    random_device rnd;
+    mt19937 gen(rnd());
+    normal_distribution <double>norm(0,1);
+    uniform_real_distribution <double>uni(0,1);
 
 
 
 
+    mat rold=zeros<mat>(m_nelectrons,2);
+    mat rnew=zeros<mat>(m_nelectrons,2);
+    double wfold=0;
+    double wfnew=0;
+
+    vec sumPsi=zeros<vec>(5); //0=en, 1,2=psi
+    vec expVal=zeros<vec>(5); //0=en, 1,2=psi
+
+    for( int m=0; m<updates; m++ ){
+
+        for(int i=0;i<m_nelectrons;i++){
+                for(int j=0;j<2;j++){
+                    rold(i,j)=norm(gen)*sqrt(m_dt);
+                }
+            }
+
+        rnew=rold;
+        for(int n=0;n<m_cycles;n++){
+            wfold=wavefunction(rold);
+            mat Qforceold=Quantumforce(rold);
+            for(int i=0;i<m_nelectrons;i++){
+                for(int j=0;j<2;j++){
+                    rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
+
+              }
+
+                wfnew=wavefunction(rnew);
+                mat Qforcenew=Quantumforce(rnew);
+                double G=0;
+                for(int j=0; j<2;j++){
+                    G+= 0.5*(Qforcenew(i,j)+Qforceold(i,j))*(0.25*m_dt*(Qforceold(i,j)-Qforcenew(i,j))-rnew(i,j)+rold(i,j));
+
+                }
+                G=exp(G);
+
+                if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){
+
+                    for(int j=0;j<2;j++){
+                        rold(i,j)=rnew(i,j);
+                        wfold=wfnew;
+                    }
+                }
+                else{
+                    for(int j=0; j<0;j++){
+                        rnew(i,j)=rold(i,j);
+                    }
+                }
+
+                double r12=relDis(rnew, 0,1);
+                double den=1/(1+m_varpar(1)*r12);
+                double l1=.5*m_w*m_w*(pos2(rnew,0)+pos2(rnew,1))*(1-m_varpar(0)*m_varpar(0))+2*m_varpar(0)*m_w+1/r12;
+                double l2=2*m_varpar(0)*m_varpar(0)*m_w*m_w*(pos2(rnew,0)+pos2(rnew,1))-4*m_w*m_varpar(0)-2*m_a*m_varpar(0)*m_w*r12*den*den+2*m_a*den*den*(m_a*den*den+1/r12-2*m_varpar(1)*den);
+
+                double temp=l1+l2;
+                double tempPsia=-0.5*m_w*(pos2(rnew,0)+pos2(rnew,1));
+                double tempPsib=-m_a*r12*r12*den*den;
+                sumPsi(0)+=temp;
+                sumPsi(2)+=tempPsib;
+                sumPsi(1)+=tempPsia;
+                sumPsi(3)+=tempPsib*temp;
+                sumPsi(4)+=tempPsia*temp;
 
 
 
 
-    m_alpha=anew;
-    m_beta=bnew;
-    resetvalues();
+            }
+
+
+
+
+
+        }
+
+        expVal=sumPsi/(cycles*m_nelectrons);
+
+
+
+        dE(0)=2*(expVal(3)-expVal(1)*expVal(0));
+        dE(1)=2*(expVal(4)-expVal(2)*expVal(0));
+        parnew=parold-m_step*dE;
+
+
+        m_varpar=parnew;
+        diff= sqrt(dot(parnew-parold,parnew-parold));
+        if(diff<tolerance){ break;}
+        else{parold=parnew;}
+
+
+
+
+
+
+
+
+
+}
+
+
+    cout<<m_varpar(0)<<endl;
+    cout<<m_varpar(1);
+
+
+
 
 }
 
@@ -433,32 +462,6 @@ void VMC::findoptParameter(){
 
 
 
-
-void VMC::SteepestDescend(mat A, vec b, vec x0){
-    int IterMax=10000;
-    int i=0;
-
-    double aold=0;
-    double anew=0;
-    double bold=0;
-    double bnew=0;
-    double diffa=0;
-    double diffb=0;
-
-    while(diffa>tolerance & diffb>tolerance||i<IterMax){ /////////////////////
-
-
-        anew=aold+m_step*Ableitung(aold);
-        bnew=bold+m_step*Ableitung(bold);
-
-        diffa=anew-aold;
-        diffb=bnew-bold;
-        i++;
-    }
-
-
-
-}
 
 
 

@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 
 //binary writing
 
-    ofstream outFile;
+   /* ofstream outFile;
     outFile.open("localEnergies.dat", ios::out | ios::binary);
     if (! outFile.is_open()) {
         cout << "Could not open file." << endl;
@@ -26,14 +26,18 @@ int main(int argc, char *argv[])
     }
 
     fflush(stdout);
-    outFile.close();
+    outFile.close();*/
+
+
+
+
+    VMC a(2,100000,1,1);
+    //a.MCH();
+    a.MonteCarlo();
+
+
 
     return 0;
-
-    /*
-    VMC a(2,1000,1,1);
-    a.MonteCarlo();
-    */
 
 
 
