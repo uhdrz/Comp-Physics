@@ -31,9 +31,18 @@ int main(int argc, char *argv[])
 
 
 
-    VMC a(2,100000,1,1);
-    //a.MCH();
-    a.MonteCarlo();
+    VMC a(2,1000000,1.3,1);
+
+    //A.print();
+
+
+
+
+
+
+     a.MCH();
+   // a.MonteCarlo();
+    //a.findoptParameter();
 
 
 

@@ -11,3 +11,6 @@ HEADERS += \
 
 
 LIBS += -llapack -lblas -larmadillo
+
+
+
