@@ -34,6 +34,126 @@ VMC::VMC(int n, int cycles, double step, double w)
 
 }
 
+double VMC::hermite(int n, double x){
+    if (n==0)
+    {
+        return 1;}
+    else if (n==1)
+    {
+        return 2*x;}
+    else
+    {   double temp1=1;
+        double temp2=2*x;
+        double temp=0;
+        for(int i=2; i<n+1; i++)
+        {   temp=2*x*temp2-2*(i-1)*temp1;
+            temp1=temp2;
+            temp2=temp;
+            //cout<<temp;
+        }
+       // cout<<temp;
+        return temp;
+
+
+    }
+}
+
+
+
+
+
+double VMC::spwf(double x, double y, int nx, int ny){
+
+    double phi=hermite(nx,sqrt(m_w)*x)* hermite(ny,sqrt(m_w)*y)*exp(-0.5*m_varpar(0)*m_w*(pow(x,2)+pow(y,2)));
+
+    return phi;
+
+
+
+
+}
+
+
+double VMC::SlaterDet(mat &r){
+    int n_el= m_nelectrons*0.5; //Spin separatly
+    mat Slaterup = zeros(n_el,n_el);
+    mat Slaterdown = zeros(n_el,n_el);
+    for(int i=0;i<n_el;i++){
+        for( int j=0;j<n_el;j++){
+            vec n=postonum(j);
+            Slaterup(i,j)=spwf(r(i,0),r(i,1),n(0),n(1));
+        }
+
+     }
+    for(int i=n_el;i<m_nelectrons;i++){
+        for( int j=n_el;j<m_nelectrons;j++){
+            vec n=postonum(j);
+            Slaterdown(i,j)=spwf(r(i,0),r(i,1),n(0),n(1));
+        }
+
+     }
+
+  double SlaterDet=det(Slaterup)*det(Slaterdown);
+
+  return SlaterDet;
+
+}
+
+
+
+
+double VMC::wavefunction1(mat &r){
+    double Slaterdet=SlaterDet(r);
+    double jastrow=0;
+    for(int i=0;i<m_nelectrons;i++){
+        for(int j=0;j<i;j++){
+            double rij=relDis(r,i,j);
+            jastrow*=exp(m_a*rij/(1+m_varpar(1)*rij));
+
+        }
+    }
+
+    return Slaterdet*jastrow;
+
+}
+
+double VMC::localEnergy(mat &r){
+    double Pot=0;
+    for(int i=0;i<m_nelectrons;i++){
+        Pot+=0.5*m_w*m_w*pos2(r,i);
+        for(int j=0;j<i;j++){
+           Pot+=1/relDis(r,i,j);
+        }
+    }
+    double Kin=0;
+    for(int i=0;i<m_nelectrons;i++){
+        Kin+=LapJastrow(r);
+        if(i<2){
+            Kin+=LapSP0(r);
+            Kin+=2*dot(GradJastrow(r),GradSP0(r));
+        }
+        if(i<6){
+            Kin+=LapSP1(r);
+            Kin+=2*dot(GradJastrow(r),GradSP1(r));
+        }
+        if(i<12){
+            Kin+=LapSP2(r);
+            Kin+=2*dot(GradJastrow(r),GradSP2(r));
+        }
+
+     }
+
+
+    double locEnergy=Kin+Pot;
+    return locEnergy;
+
+
+}
+
+
+
+
+
 
 double VMC::wavefunction(mat &r){
     //first index particle, second dimension
@@ -554,6 +674,10 @@ void VMC::findoptParameter(){
 
 
 }
+
+
+
+
 
 
 

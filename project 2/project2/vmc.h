@@ -17,6 +17,24 @@ class VMC
 public:
     VMC(int n, int cycles, double step, double w);
     double wavefunction (mat &r);
+    double spwf (double x, double y, int nx, int ny);
+    double wavefunction1 (mat &r);
+    double SlaterDet(mat &r);
+    double hermite(int n, double x);
+    double localEnergy(mat &r);
+
+    vec GradJastrow( mat &r); //
+    vec GradSP0(mat &r);//
+    vec GradSP1(mat &r);//
+    vec GradSP2(mat &r);//
+    double LapJastrow( mat &r);//
+    double LapSP0(mat &r);//
+    double LapSP1(mat &r);//
+    double LapSP2(mat &r);//
+    double LapDet0(mat &r);//
+    vec postonum(int i);
+
+
     double localEnergyder( mat &r);
     double localEnergyana(mat &r);
     void findoptParameter();

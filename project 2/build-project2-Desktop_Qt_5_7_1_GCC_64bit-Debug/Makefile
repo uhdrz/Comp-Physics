@@ -10,11 +10,11 @@ MAKEFILE      = Makefile
 
 ####### Compiler, tools and options
 
-CC            = gcc
-CXX           = g++
+CC            = mpicc
+CXX           = mpic++
 DEFINES       = -DQT_QML_DEBUG
-CFLAGS        = -pipe -g -Wall -W -fPIC $(DEFINES)
-CXXFLAGS      = -pipe -g -std=gnu++11 -Wall -W -fPIC $(DEFINES)
+CFLAGS        = -pipe -I/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent -I/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent/include -I/usr/lib/openmpi/include -I/usr/lib/openmpi/include/openmpi -pthread -g -Wall -W -fPIC $(DEFINES)
+CXXFLAGS      = -pipe -I/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent -I/usr/lib/openmpi/include/openmpi/opal/mca/event/libevent2021/libevent/include -I/usr/lib/openmpi/include -I/usr/lib/openmpi/include/openmpi -pthread -DMPICH_IGNORE_CXX_SEEK -g -std=gnu++11 -Wall -W -fPIC $(DEFINES)
 INCPATH       = -I../project2 -I. -I/home/oliver/Qt5.7.1/5.7/gcc_64/mkspecs/linux-g++
 QMAKE         = /home/oliver/Qt5.7.1/5.7/gcc_64/bin/qmake
 DEL_FILE      = rm -f
@@ -34,8 +34,8 @@ TAR           = tar -cf
 COMPRESS      = gzip -9f
 DISTNAME      = project21.0.0
 DISTDIR = /home/oliver/Documents/Github/Comp-Physics/project\ 2/build-project2-Desktop_Qt_5_7_1_GCC_64bit-Debug/.tmp/project21.0.0
-LINK          = g++
-LFLAGS        = 
+LINK          = mpic++
+LFLAGS        = -pthread -Wl,-rpath -Wl,/usr/lib/openmpi/lib -Wl,--enable-new-dtags -L/usr/lib/openmpi/lib -lmpi_cxx -lmpi
 LIBS          = $(SUBLIBS) -llapack -lblas -larmadillo 
 AR            = ar cqs
 RANLIB        = 
