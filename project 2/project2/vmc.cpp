@@ -4,6 +4,7 @@
 #include <iostream>
 #include <armadillo>
 #include <cmath>
+#include <hermitepolynomials.h>
 #include "mpi.h"
 using namespace arma;
 using namespace std;
@@ -17,7 +18,7 @@ VMC::VMC(int n, int cycles, double step, double w)
     m_dt=0.001;
     m_a={1,1.0/3};  //0 for antipar
     m_localEn=zeros<vec>(2); //?????
-    m_varpar={1,0.4}; //0=alpha, 1 =beta
+    m_varpar={1,1e10}; //0=alpha, 1 =beta
 
 
 
@@ -103,9 +104,14 @@ double VMC::SlaterDet(mat &r){
 
         }
 
-     }
+   }
 
-  double SlaterDet=det(Slaterup)*det(Slaterdown);
+    //Compute inverses
+
+    invUp = SlaterUp.i();
+    invDown = SlaterDown.i();
+
+    double SlaterDet=det(Slaterup)*det(Slaterdown);
 
 
 
@@ -115,9 +121,12 @@ double VMC::SlaterDet(mat &r){
 }
 
 double VMC::wavefunction(mat &r){
-    double Slaterdet=SlaterDet(r);
+
+    double Slaterdet = SlaterDet(r);
     double jastrow=1;
+
     int n_states=m_nelectrons/2;
+
     for(int i=0;i<m_nelectrons;i++){
         for(int j=0;j<i;j++){
             double rij=relDis(r,i,j);
@@ -262,6 +271,36 @@ vec VMC::DerivSP(int i, int nx, int ny, mat &r){
 
 }
 
+double VMC::Deriv2SPAlt(int i, int nx, int ny, mat &r) {
+
+    double x = r(i,0);
+    double y = r(i,1);
+
+    double m_omega = m_w;
+    double m_alpha = m_varpar(0);
+
+    const double Hnx = HermitePolynomials::evaluate(nx,x,m_omega,m_alpha);
+    const double Hny = HermitePolynomials::evaluate(ny,y,m_omega,m_alpha);
+
+    const double dHnx = HermitePolynomials::evaluateDerivative(nx,x,m_omega,m_alpha);
+    const double dHny = HermitePolynomials::evaluateDerivative(ny,y,m_omega,m_alpha);
+
+    const double ddHnx = HermitePolynomials::evaluateDoubleDerivative(nx,x,m_omega,m_alpha);
+    const double ddHny = HermitePolynomials::evaluateDoubleDerivative(ny,y,m_omega,m_alpha);
+
+    double r2 = x*x + y*y;
+
+    double m_omegaAlpha = m_omega*m_alpha;
+
+    return exp(-0.5*m_omegaAlpha*r2) *
+               ( - 2*m_omegaAlpha*x*Hny*dHnx
+                 - 2*m_omegaAlpha*y*Hnx*dHny
+                 + m_omegaAlpha*Hnx*Hny*(m_omegaAlpha*r2-2)
+                 + Hny*ddHnx
+                 + Hnx*ddHny );
+
+}
+
 double VMC::Deriv2SP(int i, int nx, int ny, mat &r){
     double lap=0;
     if((nx==0) && (ny==0)){
@@ -293,6 +332,7 @@ double VMC::LapSP(int i ,mat &r){
 
     mat Slaterup = zeros(n_states,n_states);
     mat Slaterdown = zeros(n_states,n_states);
+
     for(int l=0;l<n_states;l++){
         for( int j=0;j<n_states;j++){
             vec n=postonum(j);
@@ -301,6 +341,7 @@ double VMC::LapSP(int i ,mat &r){
         }
 
      }
+
     for(int l=0;l<n_states;l++){
         for( int j=0;j<n_states;j++){
             int ld=l+n_states;
@@ -310,24 +351,28 @@ double VMC::LapSP(int i ,mat &r){
         }
 
      }
-    mat SlaterupInv=inv(Slaterup);
-    mat SlaterdownInv=inv(Slaterdown);
 
-
+    mat SlaterupInv   = inv(Slaterup);
+    mat SlaterdownInv = inv(Slaterdown);
 
     for(int j=0;j<n_states;j++){
         vec n=postonum(j);
+        //n.print();
         if(i<n_states){
-            laplace += Deriv2SP(i,n(0),n(1),r)*spwf(r(i,0),r(i,1),n(0),n(1))*SlaterupInv(j,i);
+            laplace += Deriv2SPAlt(i,n(0),n(1),r)*SlaterupInv(j,i); //spwf(r(i,0),r(i,1),n(0),n(1))*
 
         }
+
         else{
+
             int temp=i-n_states;
-            laplace += Deriv2SP(i,n(0),n(1),r)*spwf(r(i,0),r(i,1),n(0),n(1))*SlaterdownInv(j,temp);
+            laplace += Deriv2SPAlt(i,n(0),n(1),r)*SlaterdownInv(j,temp); //*spwf(r(i,0),r(i,1),n(0),n(1))
 
         }
 
     }
+
+    //exit(1);
 
     return laplace;
 
@@ -341,9 +386,9 @@ double VMC::localEnergy(mat &r){
     double Pot=0;
     for(int i=0;i<m_nelectrons;i++){
         Pot+=0.5*m_w*m_w*pos2(r,i);
-        /*for(int j=0;j<i;j++){
-           Pot+=1/relDis(r,i,j);
-        }*/
+        for(int j=0;j<i;j++){
+           Pot+=1.0/relDis(r,i,j);
+        }
     }
     double Kin=0;
     for(int i=0;i<m_nelectrons;i++){
@@ -357,15 +402,59 @@ double VMC::localEnergy(mat &r){
 
 }
 
+double VMC::dXSp(int nx,int ny, mat &r, int i) {
+
+    const double x = r(i,0);
+    const double y = r(i,1);
+
+    double m_omega = m_w;
+    double m_alpha = m_varpar(0);
+
+
+    const double Hnx = HermitePolynomials::evaluate(nx,x,m_omega,m_alpha);
+    const double Hny = HermitePolynomials::evaluate(ny,y,m_omega,m_alpha);
+
+    const double dHnx = HermitePolynomials::evaluateDerivative(nx,x,m_omega,m_alpha);
+
+    double r2 = x*x+y*y;
+
+    return exp(-0.5*m_omega*m_alpha*r2) * Hny *
+            ( dHnx - Hnx*m_omega*m_alpha*x);
+}
+
+double VMC::dYSp(int nx, int ny, mat &r, int i) {
+
+    const double x = r(i,0);
+    const double y = r(i,1);
+
+    double m_omega = m_w;
+    double m_alpha = m_varpar(0);
+
+
+    const double Hnx = HermitePolynomials::evaluate(nx,x,m_omega,m_alpha);
+    const double Hny = HermitePolynomials::evaluate(ny,y,m_omega,m_alpha);
+
+
+    const double dHny = HermitePolynomials::evaluateDerivative(ny,y,m_omega,m_alpha);
+
+    double r2 = x*x+y*y;
+
+    return exp(-0.5*m_omega*m_alpha*r2) * Hnx *
+            ( dHny - Hny*m_omega*m_alpha*y);
+
+}
+
 mat VMC::Quantumforce(mat &r){ //fix m_a
+
     mat F=zeros(m_nelectrons,2);
     int n_el=m_nelectrons/2;
+
     for(int i=0;i<m_nelectrons;i++){
-        for(int k=0;k<2;k++){
-            double spart=-1.0*r(i,k)*m_varpar(0);
+        //for(int k=0;k<2;k++){
+        //    double spart = -1.0*r(i,k)*m_varpar(0);
 
-            double jpart=0;
-
+        //    double jpart=0;
+            /*
             for(int j=0;j<m_nelectrons;j++){
                 if(i!=j){
 
@@ -377,12 +466,14 @@ mat VMC::Quantumforce(mat &r){ //fix m_a
                     }
 
                }
-              }
+           }
+            */
 
-            F(i,k)=2.0*(spart+jpart);
+          vec n = postonum(i);
+          F(i,0) = 2.0*dXSp(n(0), n(1), r, i); //*slaterInverse(k,i)   //(spart+jpart);
+          F(i,1) = 2.0*dYSp(n(0), n(1), r, i); //*slaterInverse(k,i)
 
 
-        }
     }
      return F;
 }
@@ -442,20 +533,22 @@ void VMC::MCH(){
 
 
     for(int n=0;n<m_cycles;n++){
+
         wfold=wavefunction(rold);
         mat Qforceold=Quantumforce(rold);
 
         for(int i=0;i<m_nelectrons;i++){
-            for(int j=0;j<2;j++){
+
+            for(int j=0;j<2;j++) {
                 rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
 
-          }
+            }
 
 
+            //Now compute Dup, Ddown, DupInv, DdownInv
 
-
-            wfnew=wavefunction(rnew);
-            mat Qforcenew=Quantumforce(rnew);
+            wfnew = wavefunction(rnew);
+            mat Qforcenew = Quantumforce(rnew);
             double G=0;
             for(int j=0; j<2;j++){
               G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
@@ -466,7 +559,7 @@ void VMC::MCH(){
                 accept++;
                 for(int j=0;j<2;j++){
                     rold(i,j)=rnew(i,j);
-                    wfold=wfnew;
+                    wfold=wfnew; //RESET INVERSERS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 }
                 Qforceold=Qforcenew;
 
@@ -478,13 +571,13 @@ void VMC::MCH(){
             }
 
             double l1=localEnergy(rnew);
-                    double temp=l1;
+            double temp=l1;
 
 
                     //outFile.write( (char*)&temp, sizeof(double));
                     //outFile << l1 << endl;
-                    processEnergy+=temp;
-                    processEnergy2+=temp*temp;
+            processEnergy+=temp;
+            processEnergy2+=temp*temp;
 
 
         }

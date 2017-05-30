@@ -5,11 +5,13 @@ CONFIG -= qt
 TARGET = vmc.cc
 SOURCES += main.cpp \
     TwoeVMC.cpp \
-    vmc.cpp
+    vmc.cpp \
+    hermitepolynomials.cpp
 
 HEADERS += \
     TwoeVMC.h \
-    vmc.h
+    vmc.h \
+    hermitepolynomials.h
 
 
 LIBS += -llapack -lblas -larmadillo

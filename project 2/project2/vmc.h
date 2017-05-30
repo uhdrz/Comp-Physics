@@ -45,6 +45,13 @@ public:
     double m_dt;
     vec m_localEn;
     vec m_varpar;
+
+    mat invUp;
+    mat invDown;
+
+    double Deriv2SPAlt(int i, int nx, int ny, mat &r);
+    double dXSp(int nx,int ny, mat &r, int i);
+    double dYSp(int nx,int ny, mat &r, int i);
 };
 
 #endif // VMC_H
