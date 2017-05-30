@@ -2,19 +2,20 @@ TEMPLATE = app
 CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
-
+TARGET = vmc.cc
 SOURCES += main.cpp \
+    TwoeVMC.cpp \
     vmc.cpp
 
 HEADERS += \
+    TwoeVMC.h \
     vmc.h
 
 
 LIBS += -llapack -lblas -larmadillo
 
-
-
-QMAKE_CXX = mpic++
+# MPI Settings
+QMAKE_CXX = mpicxx
 QMAKE_CXX_RELEASE = $$QMAKE_CXX
 QMAKE_CXX_DEBUG = $$QMAKE_CXX
 QMAKE_LINK = $$QMAKE_CXX
