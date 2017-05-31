@@ -16,9 +16,9 @@ VMC::VMC(int n, int cycles, double step, double w)
     m_step=step;
     m_w=w;
     m_dt=0.001;
-    m_a={1,1.0/3};  //0 for antipar
+    m_a={0.599,1.0/3};  //0 for antipar
     m_localEn=zeros<vec>(2); //?????
-    m_varpar={1,1e8}; //0=alpha, 1 =beta
+    m_varpar={1,1e6}; //0=alpha, 1 =beta
     m_invDown.zeros(m_nelectrons/2,m_nelectrons/2);
     m_invUp.zeros(m_nelectrons/2,m_nelectrons/2);
 
@@ -354,7 +354,7 @@ mat VMC::Quantumforce(mat &r, mat &InvUp, mat &InvDown){ //fix m_a
         vec GradSpace=GradSP(i,r,InvUp,InvDown);
         //vec jpart=GradJastrow(i,r);
         for(int k=0;k<2;k++){
-          F(i,k) = 2.0*(GradSpace(k));//+jpart(k)
+          F(i,k) = 2.0*(GradSpace(k));//+jpart(k));
          }
 
     }

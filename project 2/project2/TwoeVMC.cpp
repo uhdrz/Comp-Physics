@@ -27,7 +27,7 @@ TwoeVMC::TwoeVMC(int n, int cycles, double step, double w)
     m_dt=0.001;
     m_a=1;
     m_localEn=zeros<vec>(2);
-    m_varpar={1,0.4}; //0=alpha, 1 =beta
+    m_varpar={0.911,0.203}; //0=alpha, 1 =beta
 
 
 
@@ -117,7 +117,8 @@ double TwoeVMC::localEnergyana(mat &r){
 
 
 
-    //double Elocal=0.5*m_w*m_w*(1.0-m_varpar(0)*m_varpar(0))*sum+2.0*m_varpar(0)*m_w+1.0/relDis(r,0,1);//overr;
+    //double Elocal=0.5*m_w*m_w*(1.0-m_varpar(0)*m_varpar(0))*sum+2.0*m_varpar(0)*m_w+1.0/relDis(r,0,1);
+    //overr;
     double r12=relDis(r,0,1);
     double den=1/(1+m_varpar(1)*r12);
     //double l1=0.5*m_w*m_w*(pos2(r,0)+pos2(r,1))*(1-m_varpar(0)*m_varpar(0))+2*m_varpar(0)*m_w+1/r12;
@@ -152,8 +153,12 @@ double TwoeVMC::localEnergyder(mat &r){
             rm(i,j)=r(i,j);
 
         }}
+    double sum=0;
+    for(int i=0;i<m_nelectrons;i++){
+        sum+=pos2(r,i);
+    }
 
-    double Elocal=-0.5*deriv/(wfc*h*h);
+    double Elocal=-0.5*deriv/(wfc*h*h)+0.5*m_w*m_w*sum+1/relDis(r,0,1);
 
     return Elocal;
 
@@ -189,7 +194,8 @@ void TwoeVMC::MCH(int c, char **v){
     fileout.append(argument);
     fileout.append(".txt");
     outFile.open(fileout, ios::out);
-    position.open("pos.dat",ios::out);
+
+    if ( MyRank == 0){position.open("pos.dat",ios::out);}
 
     double TotalEnergy=0;
     double TotalEnergy2=0;
@@ -275,7 +281,7 @@ void TwoeVMC::MCH(int c, char **v){
 
 
 
-        rnew.print(position);
+        if ( MyRank == 0){rnew.print(position);}
 
 
 
@@ -297,7 +303,9 @@ void TwoeVMC::MCH(int c, char **v){
         cout << Energy << endl;
         cout<< Variance <<  endl;
         cout<< StandardDeviation << endl;
-        cout<<(double)accept/(m_cycles*m_nelectrons)*100;
+        cout<<(double)accept/(m_cycles*m_nelectrons)*100<<endl;
+        cout<< m_varpar(0)<<endl;
+        cout<<m_varpar(1)<<endl;
 
     }
     /*double Energy = processEnergy/( (double)m_cycles);
@@ -382,7 +390,7 @@ void TwoeVMC::MonteCarlo(){
 
 
         }
-        double temp=localEnergyana(rnew);
+        double temp=localEnergyder(rnew);
         //cout<<temp<<endl;
         sum+=temp;
         sumsquared+=temp*temp;
@@ -398,7 +406,7 @@ void TwoeVMC::MonteCarlo(){
 
     cout<< "Energy"<< energy<<endl;
     cout<< "Variance"<< variance<<endl;
-    cout<<(double)accept/(m_nelectrons*m_cycles)*100;
+    cout<<(double)accept/(m_nelectrons*m_cycles)*100<<endl;
 
 
 
@@ -547,8 +555,8 @@ void TwoeVMC::findoptParameter(){
 
 
 
-    cout<<m_varpar(0)<<endl;
-    cout<<m_varpar(1);
+    //cout<<m_varpar(0)<<endl;
+    //cout<<m_varpar(1);
 
 
 
