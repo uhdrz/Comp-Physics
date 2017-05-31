@@ -14,28 +14,32 @@ class VMC
 {
 public:
     VMC(int n, int cycles, double step, double w);
-    double wavefunction (mat &r);
+    double wavefunction (mat &r,mat &Slaterup, mat &Slaterdown);
     double spwf (double x, double y, int nx, int ny);
-    double SlaterDet(mat &r);
-    double hermite(int n, double x);
-    double localEnergy(mat &r);
+    double localEnergy(mat &r, mat &InvUp, mat &InvDown);
 
 
     vec GradJastrow(int k, mat &r); //
-    vec GradSP(int i, mat &r);
+    vec GradSP(int i, mat &r, mat &InvUp, mat &InvDown);
     vec DerivSP(int i, int nx, int ny, mat &r);
     double Deriv2SP(int i, int nx, int ny, mat &r);
 
     double LapJastrow(int k, mat &r);//
-    double LapSP(int i ,mat &r);
+    double LapSP(int i , mat &r, mat &InvUp, mat &InvDown);
     vec postonum(int i);
+    mat Slatermatrixdown(mat &r);
+    mat Slatermatrixup(mat &r);
+    mat SlaterUpInv(mat &Slaterup);
+    mat SlaterDownInv(mat &Slaterdown);
+    double derivJastrow(int i, int j, double rij);
+    double deriv2Jastrow(int i, int j, double rij);
 
 
 
     void findoptParameter();
     double relDis(mat &r, int i, int j);
     double pos2(mat &r, int i);
-    mat Quantumforce( mat &r);
+    mat Quantumforce(mat &r, mat &InvUp, mat &InvDown);
     void MCH();
     int m_cycles;
     int m_nelectrons;
@@ -46,12 +50,9 @@ public:
     vec m_localEn;
     vec m_varpar;
 
-    mat invUp;
-    mat invDown;
+    mat m_invUp;
+    mat m_invDown;
 
-    double Deriv2SPAlt(int i, int nx, int ny, mat &r);
-    double dXSp(int nx,int ny, mat &r, int i);
-    double dYSp(int nx,int ny, mat &r, int i);
 };
 
 #endif // VMC_H

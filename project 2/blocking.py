@@ -10,7 +10,7 @@ def meanAndVariance(vec):
     var = sum([i ** 2 for i in vec])/len(vec) - mean*mean
     return mean, var
 
-data = [float( line.rstrip('\n')) for line in open('mc0.txt')]
+data = [float( line.rstrip('\n')) for line in open('VMC.txt')]
 
 n_blocks = 200
 block_size_min = 100

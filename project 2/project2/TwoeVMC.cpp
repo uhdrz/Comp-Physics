@@ -46,7 +46,7 @@ double TwoeVMC::wavefunction(mat &r){
 
 
 
-    double phi= exp(-0.5*m_w*m_varpar(0)*sum );//*exp(m_a*relDis(r,0,1)/(1+m_varpar(1)*relDis(r,0,1)));
+    double phi= exp(-0.5*m_w*m_varpar(0)*sum )*exp(m_a*relDis(r,0,1)/(1+m_varpar(1)*relDis(r,0,1)));
 
     return phi;
 
@@ -117,12 +117,12 @@ double TwoeVMC::localEnergyana(mat &r){
 
 
 
-    double Elocal=0.5*m_w*m_w*(1.0-m_varpar(0)*m_varpar(0))*sum+2.0*m_varpar(0)*m_w+1.0/relDis(r,0,1);//overr;
+    //double Elocal=0.5*m_w*m_w*(1.0-m_varpar(0)*m_varpar(0))*sum+2.0*m_varpar(0)*m_w+1.0/relDis(r,0,1);//overr;
     double r12=relDis(r,0,1);
     double den=1/(1+m_varpar(1)*r12);
     //double l1=0.5*m_w*m_w*(pos2(r,0)+pos2(r,1))*(1-m_varpar(0)*m_varpar(0))+2*m_varpar(0)*m_w+1/r12;
-    //double l2=-0.5*(m_w*m_w*m_varpar(0)*m_varpar(0)*(pos2(r,0)+pos2(r,1))-4*m_varpar(0)*m_w-2*m_a*m_varpar(0)*m_w*r12*den*den+2*m_a*den*den*(1/r12+m_a*den*den-2*m_varpar(1)*den))+0.5*m_w*m_w*(pos2(r,0)+pos2(r,1))+1/r12;
-    //double Elocal=l2;
+    double l2=-0.5*(m_w*m_w*m_varpar(0)*m_varpar(0)*(pos2(r,0)+pos2(r,1))-4*m_varpar(0)*m_w-2*m_a*m_varpar(0)*m_w*r12*den*den+2*m_a*den*den*(1/r12+m_a*den*den-2*m_varpar(1)*den))+0.5*m_w*m_w*(pos2(r,0)+pos2(r,1))+1/r12;
+    double Elocal=l2;
     return Elocal;
 
 }
@@ -229,6 +229,8 @@ void TwoeVMC::MCH(int c, char **v){
         wfold=wavefunction(rold);
         mat Qforceold=Quantumforce(rold);
 
+
+
         for(int i=0;i<m_nelectrons;i++){
             for(int j=0;j<2;j++){
                 rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
@@ -250,9 +252,10 @@ void TwoeVMC::MCH(int c, char **v){
                 accept++;
                 for(int j=0;j<2;j++){
                     rold(i,j)=rnew(i,j);
-                    wfold=wfnew;
+
                 }
                 Qforceold=Qforcenew;
+                wfold=wfnew;
 
             }
             else{
@@ -260,20 +263,23 @@ void TwoeVMC::MCH(int c, char **v){
                     rnew(i,j)=rold(i,j);
                 }
             }
+            double l1=localEnergyana(rold);
+            double temp=l1;
+            processEnergy+=temp;
+            processEnergy2+=temp*temp;
+            //outFile.write( (char*)&temp, sizeof(double));
+            outFile << l1 << endl;
 
 
         }
 
-        double l1=localEnergyana(rnew);
-        double temp=l1;
+
 
         rnew.print(position);
 
 
-        //outFile.write( (char*)&temp, sizeof(double));
-        outFile << l1 << endl;
-        processEnergy+=temp;
-        processEnergy2+=temp*temp;
+
+
 
     }
 
@@ -284,9 +290,9 @@ void TwoeVMC::MCH(int c, char **v){
 
 
     if ( MyRank == 0) {
-        double Energy = TotalEnergy/( (double)NumberProcesses*m_cycles);
-        double Variance = TotalEnergy2/( (double)NumberProcesses*m_cycles)-Energy*Energy;
-        double StandardDeviation = sqrt(Variance/((double)NumberProcesses*m_cycles)); // over optimistic error
+        double Energy = TotalEnergy/( (double)NumberProcesses*m_cycles*m_nelectrons);
+        double Variance = TotalEnergy2/( (double)NumberProcesses*m_cycles*m_nelectrons)-Energy*Energy;
+        double StandardDeviation = sqrt(Variance/((double)NumberProcesses*m_cycles*m_nelectrons)); // over optimistic error
 
         cout << Energy << endl;
         cout<< Variance <<  endl;

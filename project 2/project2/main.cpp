@@ -17,10 +17,10 @@ int main(int argc, char *argv[])
 
 
 
-   TwoeVMC b(2,10000,1.3,1);
-  // b.MCH(c, v);
+   TwoeVMC b(2,1e6,1.3,1);
+   //b.MCH(c, v);
   // b.MonteCarlo();
-   VMC a(2,1e6,1.3,1);
+   VMC a(12,100000,1.3,1);
    a.MCH();
 
     cout << endl;
