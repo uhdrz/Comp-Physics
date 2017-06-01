@@ -188,6 +188,7 @@ void TwoeVMC::MCH(int c, char **v){
     string filename = "mc"; // first command line argument after name of program
     string fileout = filename;
     string argument = to_string(MyRank);
+    fileout.append(m_w);
     fileout.append(argument);
     fileout.append(".txt");
     outFile.open(fileout, ios::out);

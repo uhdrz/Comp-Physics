@@ -40,8 +40,8 @@ public:
     void findoptParameter();
     double relDis(mat &r, int i, int j);
     double pos2(mat &r, int i);
-    mat Quantumforce(mat &r, mat &InvUp, mat &InvDown);
-    void MCH();
+    vec Quantumforce(int i, mat &r, mat &InvUp, mat &InvDown);
+    void MCH(int c, char **v);
     int m_cycles;
     int m_nelectrons;
     double m_w;

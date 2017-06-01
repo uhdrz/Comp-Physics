@@ -10,7 +10,7 @@ using namespace arma;
 using namespace std;
 
 
-// Without importacne sampling
+
 VMC::VMC(int n, int cycles, double step, double w)
 {
     m_nelectrons=n;
@@ -20,7 +20,7 @@ VMC::VMC(int n, int cycles, double step, double w)
     m_dt=0.01;
     m_a={1,1.0/3};  //0 for antipar
     m_localEn=zeros<vec>(2); //?????
-    m_varpar={1,0.4}; //0=alpha, 1 =beta
+    m_varpar={1.1,0.47}; //0=alpha, 1 =beta
     m_invDown.zeros(m_nelectrons/2,m_nelectrons/2);
     m_invUp.zeros(m_nelectrons/2,m_nelectrons/2);
 
@@ -184,7 +184,7 @@ double VMC::deriv2Jastrow(int i, int j, double rij){
 
 }
 
-double VMC::LapJastrow(int k, mat &r){ //Fehler!!!!!!!!!
+double VMC::LapJastrow(int k, mat &r){
     double lap=0;
 
     for(int i=0;i<m_nelectrons;i++){
@@ -195,10 +195,11 @@ double VMC::LapJastrow(int k, mat &r){ //Fehler!!!!!!!!!
                     double rki=relDis(r,k,i);
                     for( int d=0; d<2;d++){
 
-                        lap+=(r(k,d)-r(i,d))*(r(k,d)-r(j,d));
+                        lap+=(r(k,d)-r(i,d))*(r(k,d)-r(j,d))*derivJastrow(k,i,rki)*derivJastrow(k,j,rkj)/(rki*rkj);
 
                     }
-                    lap*=derivJastrow(k,i,rki)*derivJastrow(k,j,rkj)/(rki*rkj);
+
+
                  }
             }
         }
@@ -321,6 +322,15 @@ double VMC::LapSP(int i ,mat &r, mat &InvUp, mat &InvDown){
 
 }
 
+
+double VMC::DerivAlpha(int i,int nx,int ny, mat &r){
+
+}
+
+double VMC::DerivBeta(int i,int nx,int ny, mat &r){
+
+}
+
 double VMC::localEnergy(mat &r, mat &InvUp, mat &InvDown){
 
     double Pot=0;
@@ -348,50 +358,57 @@ double VMC::localEnergy(mat &r, mat &InvUp, mat &InvDown){
 
 }
 
+vec VMC::Quantumforce(int i, mat &r, mat &InvUp, mat &InvDown){ //fix m_a
+
+   vec F=zeros<vec>(2);
 
 
 
+    vec GradSpace=GradSP(i,r,InvUp,InvDown);
+    vec jpart=GradJastrow(i,r);
 
+     for(int k=0;k<2;k++) {
+         F(k) = 2.0*(GradSpace(k)+jpart(k));
 
-mat VMC::Quantumforce(mat &r, mat &InvUp, mat &InvDown){ //fix m_a
+     }
 
-    mat F=zeros(m_nelectrons,2);
-
-
-    for(int i=0;i<m_nelectrons;i++){
-
-        vec GradSpace=GradSP(i,r,InvUp,InvDown);
-        vec jpart=GradJastrow(i,r);
-
-        for(int k=0;k<2;k++) {
-            F(i,k) = 2.0*(GradSpace(k)+jpart(k));
-
-        }
-
-    }
 
     return F;
 
 }
 
-void VMC::MCH(){
-    //int NumberProcesses, MyRank;
-    //cout<<c;
-
-    /*MPI_Init (&c, &v);
+void VMC::MCH(int c, char **v){
+    MPI_Init (&c, &v);
     MPI_Comm_size (MPI_COMM_WORLD, &NumberProcesses);
-    MPI_Comm_rank (MPI_COMM_WORLD, &MyRank);*/
+    MPI_Comm_rank (MPI_COMM_WORLD, &MyRank);
     ofstream outFile;
+    ofstream position;
 
 
 
 
-    string filename = "VMC"; // first command line argument after name of program
+    string filename = "mc"; //
     string fileout = filename;
-    // string argument = to_string(MyRank);
-    //fileout.append(argument);
+    string argument = to_string(MyRank);
+    fileout.append(m_w);
+    fileout.append(argument);
     fileout.append(".txt");
     outFile.open(fileout, ios::out);
+
+
+    string filename2 = "pos"; //
+    string fileout2 = filename2;
+    string argument2 = to_string(m_w);
+    fileout2.append(argument2);
+    fileout2.append(".txt");
+
+
+
+
+
+
+
+    if ( MyRank == 0){position.open(fileout2,ios::out);}
 
 
     double TotalEnergy=0;
@@ -432,7 +449,7 @@ void VMC::MCH(){
     mat SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
     mat SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
     wfold=wavefunction(rold,SlaterUpOld,SlaterDownOld);
-    mat Qforceold=Quantumforce(rold,SlaterInvUpOld,SlaterInvDownOld);
+
     for(int n=0;n<m_cycles;n++){
 
 
@@ -441,7 +458,7 @@ void VMC::MCH(){
 
         //nt i = rand() % m_nelectrons;
         for(int i=0; i < m_nelectrons; i++) {
-
+        vec Qforceold=Quantumforce(i,rold,SlaterInvUpOld,SlaterInvDownOld);
             //cout << i << endl;
 
 
@@ -449,7 +466,7 @@ void VMC::MCH(){
             //for(int i=0;i<m_nelectrons;i++){
 
             for(int j=0;j<2;j++) {
-                rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
+                rnew(i,j)=rold(i,j)+0.5*Qforceold(j)*m_dt+norm(gen)*sqrt(m_dt);
 
             }
 
@@ -460,21 +477,21 @@ void VMC::MCH(){
             mat SlaterInvDownNew=SlaterDownInv(SlaterDownNew);
 
             wfnew=wavefunction(rnew,SlaterUpNew,SlaterDownNew);
-            mat Qforcenew=Quantumforce(rnew,SlaterInvUpNew,SlaterInvDownNew);
+            vec Qforcenew=Quantumforce(i,rnew,SlaterInvUpNew,SlaterInvDownNew);
 
             double G=0;
             double gexp = 0;
             for(int j=0; j<2;j++){
 
-                double term1 = - (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(i,j))*
-                        (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(i,j));
-                double term2 =   (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(i,j))*
-                        (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(i,j));
+                double term1 = - (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j))*
+                        (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j));
+                double term2 =   (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j))*
+                        (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j));
 
                 gexp += term1+term2;
 
-                G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))
-                        +0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
+                /*G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))
+                        +0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));*/
             }
 
             G=exp(gexp/(2.0*m_dt));
@@ -510,55 +527,51 @@ void VMC::MCH(){
 
             }
 
-            double l1=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
-            double temp=l1;
+            double temp=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
 
-
-            //outFile.write( (char*)&temp, sizeof(double));
-            outFile << l1 << endl;
             processEnergy+=temp;
+
+            outFile << l1 << endl;
         }
+        if ( MyRank == 0){rnew.print(position);}
 
     }
 
 
 
-    //MPI_Reduce(&processEnergy, &TotalEnergy, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&processEnergy, &TotalEnergy, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 
 
-    /*if ( MyRank == 0) {
+    if ( MyRank == 0) {
         double Energy = TotalEnergy/( (double)NumberProcesses*m_cycles);
 
         cout << Energy << endl;
+        cout<<(double)accept/(m_cycles*m_nelectrons)*100<<endl;
+        cout<< m_varpar(0)<<endl;
+        cout<< m_varpar(1)<<endl;
 
         //
 
-    }*/
-    double Energy = processEnergy/( (double)m_cycles*m_nelectrons);
-    cout << Energy << endl;
-    cout<<(double)accept/(m_cycles*m_nelectrons)*100;
+    }
+    /*double Energy = processEnergy/( (double)m_cycles*m_nelectrons);
+    cout << Energy << endl;*/
 
 
 
 
 
 
-    /*fflush(stdout);
+
+    fflush(stdout);
     outFile.close();
 
-    MPI_Finalize ();*/
+    MPI_Finalize ();
 
 
 
 
 }
-
-
-
-
-
-
 
 void VMC::MonteCarlo(){
 
@@ -666,20 +679,9 @@ void VMC::MonteCarlo(){
 
 }
 
-
-
-
-
-
-
-
-
-
-
-/*
 void VMC::findoptParameter(){
-    int updates=10000;
-    int cycles=1000000;
+    int updates=1000;
+    int cycles=10000;
     vec dE=zeros<vec>(2);
     double tolerance = 1.0e-14;
     vec parold={1,0.5};
@@ -724,58 +726,101 @@ void VMC::findoptParameter(){
         rnew=rold;
 
 
+        mat SlaterUpOld=Slatermatrixup(rold);
+        mat SlaterDownOld=Slatermatrixdown(rold);
+        mat SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
+        mat SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
+        wfold=wavefunction(rold,SlaterUpOld,SlaterDownOld);
 
-        for(int n=0;n<cycles;n++){
-            wfold=wavefunction(rold);
-            mat Qforceold=Quantumforce(rold);
-
-            for(int i=0;i<m_nelectrons;i++){
-                for(int j=0;j<2;j++){
-                    rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
-
-              }
+        for(int n=0;n<m_cycles;n++){
 
 
 
 
-                wfnew=wavefunction(rnew);
-                mat Qforcenew=Quantumforce(rnew);
-                double G=0;
-                for(int j=0; j<2;j++){
-                  G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
+
+
+            for(int i=0; i < m_nelectrons; i++) {
+            vec Qforceold=Quantumforce(i,rold,SlaterInvUpOld,SlaterInvDownOld);
+
+
+
+
+
+
+                for(int j=0;j<2;j++) {
+                    rnew(i,j)=rold(i,j)+0.5*Qforceold(j)*m_dt+norm(gen)*sqrt(m_dt);
+
                 }
-                G=exp(G);
 
-                if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){
+
+                mat SlaterUpNew=Slatermatrixup(rnew);
+                mat SlaterDownNew=Slatermatrixdown(rnew);
+                mat SlaterInvUpNew=SlaterUpInv(SlaterUpNew);
+                mat SlaterInvDownNew=SlaterDownInv(SlaterDownNew);
+
+                wfnew=wavefunction(rnew,SlaterUpNew,SlaterDownNew);
+                vec Qforcenew=Quantumforce(i,rnew,SlaterInvUpNew,SlaterInvDownNew);
+
+                double G=0;
+                double gexp = 0;
+                for(int j=0; j<2;j++){
+
+                    double term1 = - (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j))*
+                            (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j));
+                    double term2 =   (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j))*
+                            (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j));
+
+                    gexp += term1+term2;
+
+                    /*G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))
+                            +0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));*/
+                }
+
+                G=exp(gexp/(2.0*m_dt));
+
+                if(uni(gen) <= G*(wfnew*wfnew)/(wfold*wfold)){
+
+                    accept++;
                     for(int j=0;j<2;j++){
                         rold(i,j)=rnew(i,j);
-                        wfold=wfnew;
+
                     }
+
                     Qforceold=Qforcenew;
+                    wfold=wfnew;
+                    SlaterUpOld=SlaterUpNew;
+                    SlaterDownOld=SlaterDownNew;
+                    SlaterInvUpOld=SlaterInvUpNew;
+                    SlaterInvDownOld=SlaterInvDownNew;
+
 
                 }
+
                 else{
+
                     for(int j=0; j<2;j++){
                         rnew(i,j)=rold(i,j);
                     }
+
+                    SlaterUpOld=Slatermatrixup(rold);
+                    SlaterDownOld=Slatermatrixdown(rold);
+                    SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
+                    SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
+
                 }
+
+                double temp=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
+                double tempPsia=-0.5*m_w*(pos2(rnew,0)+pos2(rnew,1));
+                double tempPsib=-m_a*r12*r12*den*den;
+                sumPsi(0)+=temp;
+                sumPsi(2)+=tempPsib;
+                sumPsi(1)+=tempPsia;
+                sumPsi(3)+=tempPsia*temp;
+                sumPsi(4)+=tempPsib*temp;
+
 
 
             }
-            double r12=relDis(rnew, 0,1);
-            double den=1/(1+m_varpar(1)*r12);
-            double temp=localEnergyana(rnew);//0.5*m_w*m_w*(pos2(rnew,0)+pos2(rnew,1))*(1-m_varpar(0)*m_varpar(0))+2*m_varpar(0)*m_w+1/r12;
-
-
-
-
-            double tempPsia=-0.5*m_w*(pos2(rnew,0)+pos2(rnew,1));
-            double tempPsib=-m_a*r12*r12*den*den;
-            sumPsi(0)+=temp;
-            sumPsi(2)+=tempPsib;
-            sumPsi(1)+=tempPsia;
-            sumPsi(3)+=tempPsia*temp;
-            sumPsi(4)+=tempPsib*temp;
 
 
         }
@@ -789,7 +834,12 @@ void VMC::findoptParameter(){
 
 
 
-        expVal=sumPsi/(cycles);
+
+
+
+
+
+        expVal=sumPsi/(cycles*m_nelectrons);
 
 
 
@@ -820,10 +870,10 @@ void VMC::findoptParameter(){
 
 
 
-    cout<<m_varpar(0)<<endl;
-    cout<<m_varpar(1);
+    cout<< m_varpar(0)<<endl;
+    cout<< m_varpar(1)<<endl;
 
 
 
 
-}*/
+}
