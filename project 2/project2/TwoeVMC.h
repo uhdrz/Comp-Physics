@@ -22,7 +22,7 @@ public:
     void findoptParameter();
     double relDis(mat &r, int i, int j);
     double pos2(mat &r, int i);
-    mat Quantumforce( mat &r);
+    vec Quantumforce(int i, mat &r);
     void MCH(int c, char** v);
     void test();
     void MonteCarlo();

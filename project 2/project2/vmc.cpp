@@ -9,16 +9,18 @@
 using namespace arma;
 using namespace std;
 
+
+// Without importacne sampling
 VMC::VMC(int n, int cycles, double step, double w)
 {
     m_nelectrons=n;
     m_cycles=cycles;
     m_step=step;
     m_w=w;
-    m_dt=0.001;
-    m_a={0.599,1.0/3};  //0 for antipar
+    m_dt=0.01;
+    m_a={1,1.0/3};  //0 for antipar
     m_localEn=zeros<vec>(2); //?????
-    m_varpar={1,1e6}; //0=alpha, 1 =beta
+    m_varpar={1,0.4}; //0=alpha, 1 =beta
     m_invDown.zeros(m_nelectrons/2,m_nelectrons/2);
     m_invUp.zeros(m_nelectrons/2,m_nelectrons/2);
 
@@ -34,8 +36,8 @@ vec VMC::postonum(int i){
     int m;
     for(m=0; temp1<=i; m++)
     { temp2=temp1;
-      temp1+= (m+1);
-     }
+        temp1+= (m+1);
+    }
 
     n(1)=i-temp2;
     n(0)=m-1-n(1);
@@ -46,6 +48,7 @@ vec VMC::postonum(int i){
 }
 
 double VMC::spwf(double x, double y, int nx, int ny){
+
     const double Hnx = HermitePolynomials::evaluate(nx,x,m_w,m_varpar(0));
     const double Hny = HermitePolynomials::evaluate(ny,y,m_w,m_varpar(0));
 
@@ -53,10 +56,6 @@ double VMC::spwf(double x, double y, int nx, int ny){
     double phi=Hnx* Hny*exp(-0.5*m_varpar(0)*m_w*(pow(x,2)+pow(y,2)));
 
     return phi;
-
-
-
-
 }
 
 mat VMC::Slatermatrixup(mat &r){
@@ -71,7 +70,7 @@ mat VMC::Slatermatrixup(mat &r){
 
         }
 
-     }
+    }
     return Slaterup;
 }
 
@@ -88,7 +87,7 @@ mat VMC::Slatermatrixdown(mat &r){
 
         }
 
-   }
+    }
     return Slaterdown;
 
 }
@@ -136,19 +135,16 @@ vec VMC::GradJastrow(int k, mat &r){
 
     vec deriv=zeros<vec>(2);
 
-    for(int i=0;i<k;i++){
+    for(int i=0;i<m_nelectrons;i++){
         for(int j=0;j<2;j++){
-            double rik=relDis(r,i,k);
-            deriv(j)+=(r(k,j)-r(i,j))*derivJastrow(i,k,rik)   /rik;
+            if(i!=k){
+                double rik=relDis(r,i,k);
+                deriv(j)+=(r(k,j)-r(i,j))*derivJastrow(i,k,rik)/rik;
+            }
 
         }
     }
-    for(int i=k+1;i<m_nelectrons;i++){
-        for(int j=0;j<2;j++){
-            double rki=relDis(r,k,i);
-            deriv(j)-=(r(i,j)-r(k,j))*derivJastrow(k,i,rki)  /rki;
-        }
-    }
+
 
     return deriv;
 
@@ -160,51 +156,55 @@ double VMC::derivJastrow(int i, int j, double rij){
     double deriv=0;
 
     if((i < n_states && j< n_states)||(i >= n_states && j>= n_states)){
-        deriv=m_a(1)/(rij*pow(1.0+m_varpar(1)*rij,2));
+        deriv = m_a(1)/(pow(1.0+m_varpar(1)*rij,2));
     }
     else{
-        deriv=m_a(0)/(rij*pow(1.0+m_varpar(1)*rij,2));
-
+        deriv = m_a(0)/(pow(1.0+m_varpar(1)*rij,2));
     }
 
     return deriv;
 }
 
- double VMC::deriv2Jastrow(int i, int j, double rij){
-     int n_states=m_nelectrons/2;
-     double deriv2=0;
+double VMC::deriv2Jastrow(int i, int j, double rij){
 
-     if((i < n_states && j< n_states)||(i >= n_states && j>= n_states)){
-         deriv2=m_a(1)*m_varpar(1)/(rij*pow(1.0+m_varpar(1)*rij,3));
-     }
-     else{
-         deriv2=m_a(0)*m_varpar(1)/(rij*pow(1.0+m_varpar(1)*rij,3));
+    int n_states=m_nelectrons/2;
+    double deriv2=0;
 
-     }
+    if((i < n_states && j< n_states)||(i >= n_states && j>= n_states)){
+        deriv2= -2.0*m_a(1)*m_varpar(1)/(pow(1.0+m_varpar(1)*rij,3));
+    }
+    else{
+        deriv2= -2.0*m_a(0)*m_varpar(1)/(pow(1.0+m_varpar(1)*rij,3));
 
-     return deriv2;
+    }
+
+    return deriv2;
 
 
 
- }
+}
 
-double VMC::LapJastrow(int k, mat &r){
+double VMC::LapJastrow(int k, mat &r){ //Fehler!!!!!!!!!
     double lap=0;
 
     for(int i=0;i<m_nelectrons;i++){
         for(int j=0;j<m_nelectrons;j++){
-            if( (i!=k) && (j!=k) ){
-                for( int d=0; d<2;d++){
-                    double rki=relDis(r,k,i);
+            if( i!=k){
+                if(j!=k){
                     double rkj=relDis(r,k,j);
-                    lap+=(r(k,d)-r(i,d))*(r(k,d)-r(j,d))*derivJastrow(k,i,rki)*derivJastrow(k,j,rkj)/(rki*rkj);
+                    double rki=relDis(r,k,i);
+                    for( int d=0; d<2;d++){
 
-                }
+                        lap+=(r(k,d)-r(i,d))*(r(k,d)-r(j,d));
+
+                    }
+                    lap*=derivJastrow(k,i,rki)*derivJastrow(k,j,rkj)/(rki*rkj);
+                 }
             }
         }
         if(i!=k){
             double rki=relDis(r,k,i);
-            lap+=deriv2Jastrow(k,i,rki)+2*derivJastrow(k,i,rki)/rki;
+            lap+=deriv2Jastrow(k,i,rki)+1*derivJastrow(k,i,rki)/rki;
         }
     }
     return lap;
@@ -217,19 +217,16 @@ vec VMC::GradSP(int i, mat &r, mat &InvUp, mat &InvDown){
     vec Grad=zeros<vec>(2);
     int n_states= m_nelectrons/2; //Spin separatly
 
-    ;
-
-
 
     for(int j=0;j<n_states;j++){
         vec n=postonum(j);
         if(i<n_states){
             Grad+=DerivSP(i,n(0),n(1),r)*InvUp(j,i);
-         }
+        }
         else{
             int temp=i-n_states;
             Grad+=DerivSP(i,n(0),n(1),r)*InvDown(j,temp);
-         }
+        }
 
     }
 
@@ -283,11 +280,11 @@ double VMC::Deriv2SP(int i, int nx, int ny, mat &r) {
     double m_omegaAlpha = m_w*m_varpar(0);
 
     return exp(-0.5*m_omegaAlpha*r2) *
-               ( - 2*m_omegaAlpha*x*Hny*dHnx
-                 - 2*m_omegaAlpha*y*Hnx*dHny
-                 + m_omegaAlpha*Hnx*Hny*(m_omegaAlpha*r2-2)
-                 + Hny*ddHnx
-                 + Hnx*ddHny );
+            ( - 2*m_omegaAlpha*x*Hny*dHnx
+              - 2*m_omegaAlpha*y*Hnx*dHny
+              + m_omegaAlpha*Hnx*Hny*(m_omegaAlpha*r2-2)
+              + Hny*ddHnx
+              + Hnx*ddHny );
 
 }
 
@@ -330,20 +327,31 @@ double VMC::localEnergy(mat &r, mat &InvUp, mat &InvDown){
     for(int i=0;i<m_nelectrons;i++){
         Pot+=0.5*m_w*m_w*pos2(r,i);
         for(int j=0;j<i;j++){
-           Pot+=1.0/relDis(r,i,j);
+            Pot+=1.0/relDis(r,i,j);
         }
     }
-    double Kin=0;
+    double Kin  = 0;
+    double KinJ = 0;
+
     for(int i=0;i<m_nelectrons;i++){
-        Kin += -0.5*(LapSP(i,r,InvUp,InvDown));//+LapJastrow(i,r)+2*dot(GradSP(i,r,InvUp,InvDown),GradJastrow(i,r)));
+        Kin  += -0.5*LapSP(i,r,InvUp,InvDown);
+        KinJ += -0.5*(LapJastrow(i,r)+2*dot(GradSP(i,r,InvUp,InvDown),GradJastrow(i,r)));//
     }
 
 
-    double locEnergy=Kin+Pot;
+    double locEnergy=Kin+Pot+KinJ;
+
+    //cout << locEnergy << " " << locEnergy-KinJ << " " << KinJ << endl;
+
     return locEnergy;
 
 
 }
+
+
+
+
+
 
 mat VMC::Quantumforce(mat &r, mat &InvUp, mat &InvDown){ //fix m_a
 
@@ -351,14 +359,19 @@ mat VMC::Quantumforce(mat &r, mat &InvUp, mat &InvDown){ //fix m_a
 
 
     for(int i=0;i<m_nelectrons;i++){
+
         vec GradSpace=GradSP(i,r,InvUp,InvDown);
-        //vec jpart=GradJastrow(i,r);
-        for(int k=0;k<2;k++){
-          F(i,k) = 2.0*(GradSpace(k));//+jpart(k));
-         }
+        vec jpart=GradJastrow(i,r);
+
+        for(int k=0;k<2;k++) {
+            F(i,k) = 2.0*(GradSpace(k)+jpart(k));
+
+        }
 
     }
+
     return F;
+
 }
 
 void VMC::MCH(){
@@ -375,7 +388,7 @@ void VMC::MCH(){
 
     string filename = "VMC"; // first command line argument after name of program
     string fileout = filename;
-   // string argument = to_string(MyRank);
+    // string argument = to_string(MyRank);
     //fileout.append(argument);
     fileout.append(".txt");
     outFile.open(fileout, ios::out);
@@ -414,22 +427,26 @@ void VMC::MCH(){
     rnew=rold;
 
 
-
+    mat SlaterUpOld=Slatermatrixup(rold);
+    mat SlaterDownOld=Slatermatrixdown(rold);
+    mat SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
+    mat SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
+    wfold=wavefunction(rold,SlaterUpOld,SlaterDownOld);
+    mat Qforceold=Quantumforce(rold,SlaterInvUpOld,SlaterInvDownOld);
     for(int n=0;n<m_cycles;n++){
-        mat SlaterUpOld=Slatermatrixup(rold);
-        mat SlaterDownOld=Slatermatrixdown(rold);
-        mat SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
-        mat SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
-
-
-        wfold=wavefunction(rold,SlaterUpOld,SlaterDownOld);
-        mat Qforceold=Quantumforce(rold,SlaterInvUpOld,SlaterInvDownOld);
 
 
 
 
 
-        for(int i=0;i<m_nelectrons;i++){
+        //nt i = rand() % m_nelectrons;
+        for(int i=0; i < m_nelectrons; i++) {
+
+            //cout << i << endl;
+
+
+
+            //for(int i=0;i<m_nelectrons;i++){
 
             for(int j=0;j<2;j++) {
                 rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
@@ -440,23 +457,36 @@ void VMC::MCH(){
             mat SlaterUpNew=Slatermatrixup(rnew);
             mat SlaterDownNew=Slatermatrixdown(rnew);
             mat SlaterInvUpNew=SlaterUpInv(SlaterUpNew);
-            mat SlaterInvDownNew=SlaterUpInv(SlaterDownNew);
-
+            mat SlaterInvDownNew=SlaterDownInv(SlaterDownNew);
 
             wfnew=wavefunction(rnew,SlaterUpNew,SlaterDownNew);
             mat Qforcenew=Quantumforce(rnew,SlaterInvUpNew,SlaterInvDownNew);
-            double G=0;
-            for(int j=0; j<2;j++){
-              G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
-            }
-            G=exp(G);
 
-            if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){
+            double G=0;
+            double gexp = 0;
+            for(int j=0; j<2;j++){
+
+                double term1 = - (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(i,j))*
+                        (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(i,j));
+                double term2 =   (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(i,j))*
+                        (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(i,j));
+
+                gexp += term1+term2;
+
+                G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))
+                        +0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
+            }
+
+            G=exp(gexp/(2.0*m_dt));
+
+            if(uni(gen) <= G*(wfnew*wfnew)/(wfold*wfold)){
+
                 accept++;
                 for(int j=0;j<2;j++){
                     rold(i,j)=rnew(i,j);
 
                 }
+
                 Qforceold=Qforcenew;
                 wfold=wfnew;
                 SlaterUpOld=SlaterUpNew;
@@ -466,24 +496,28 @@ void VMC::MCH(){
 
 
             }
+
             else{
+
                 for(int j=0; j<2;j++){
                     rnew(i,j)=rold(i,j);
                 }
+
+                SlaterUpOld=Slatermatrixup(rold);
+                SlaterDownOld=Slatermatrixdown(rold);
+                SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
+                SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
+
             }
 
             double l1=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
             double temp=l1;
 
 
-                    //outFile.write( (char*)&temp, sizeof(double));
-                    outFile << l1 << endl;
+            //outFile.write( (char*)&temp, sizeof(double));
+            outFile << l1 << endl;
             processEnergy+=temp;
-
-
-
         }
-
 
     }
 
@@ -519,6 +553,122 @@ void VMC::MCH(){
 
 
 }
+
+
+
+
+
+
+
+void VMC::MonteCarlo(){
+
+
+    random_device rnd;
+    mt19937 gen(rnd());
+    uniform_real_distribution <double>dis(-1,1);
+    uniform_real_distribution <double>dis1(0,1);
+
+
+
+
+
+
+
+    mat rold=zeros<mat>(m_nelectrons,2);
+    mat rnew=zeros<mat>(m_nelectrons,2);
+
+    double wfold=0.0;
+    double wfnew=0.0;
+    double sum=0.0;
+    double sumsquared=0.0;
+    int accept=0;
+
+    for(int i=0;i<m_nelectrons;i++){
+        for(int j=0;j<2;j++){
+            rold(i,j)=m_step*dis(gen);
+        }
+    }
+    rnew=rold;
+    mat SlaterUpOld=Slatermatrixup(rold);
+    mat SlaterDownOld=Slatermatrixdown(rold);
+
+    wfold=wavefunction(rold,SlaterUpOld,SlaterDownOld);
+
+
+
+
+    for(int n=0;n<m_cycles;n++){
+
+
+
+        for(int i=0;i<m_nelectrons;i++){
+
+
+
+            for(int j=0;j<2;j++){
+                rnew(i,j)=rold(i,j)+m_step*dis(gen);
+
+          }
+
+         mat SlaterUpNew=Slatermatrixup(rnew);
+         mat SlaterDownNew=Slatermatrixdown(rnew);
+
+
+
+
+         wfnew=wavefunction(rnew,SlaterUpNew,SlaterDownNew);
+          //cout<<(wfnew*wfnew)/(wfold*wfold)<<endl;
+            if(dis1(gen)<=(wfnew*wfnew)/(wfold*wfold)){                       //exp(m_varpar(0)*m_w*(pos2(rold,0)+pos2(rold,1)-pos2(rnew,0)-pos2(rnew,1)))
+                accept++;
+                for(int j=0;j<2;j++){
+                    rold(i,j)=rnew(i,j);
+
+                }
+                SlaterUpOld=SlaterUpNew;
+                SlaterDownOld=SlaterDownNew;
+                wfold=wfnew;
+
+
+            }
+            else{
+                for(int j=0; j<2;j++){
+                    rnew(i,j)=rold(i,j);
+                }
+            }
+
+
+
+            mat SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
+            mat SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
+            double temp=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
+            //cout<<temp<<endl;
+            sum+=temp;
+            sumsquared+=temp*temp;
+
+
+        }
+
+
+    }
+
+    double energy=(double)sum/(m_cycles*m_nelectrons);
+    double energysquared=(double)sumsquared/(m_cycles*m_nelectrons);
+    double variance=(double)(energysquared - energy*energy)/(m_cycles*m_nelectrons);
+
+
+
+
+    cout<< "Energy"<< energy<<endl;
+    cout<< "Variance"<< variance<<endl;
+    cout<<(double)accept/(m_nelectrons*m_cycles)*100<<endl;
+
+
+
+}
+
+
+
+
 
 
 

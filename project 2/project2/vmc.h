@@ -33,6 +33,7 @@ public:
     mat SlaterDownInv(mat &Slaterdown);
     double derivJastrow(int i, int j, double rij);
     double deriv2Jastrow(int i, int j, double rij);
+    void MonteCarlo();
 
 
 

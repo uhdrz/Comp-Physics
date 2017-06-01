@@ -19,13 +19,16 @@ int main(int argc, char *argv[])
     //clock_t t1,t2;
     //t1=clock();
 
-   TwoeVMC b(2,1e6,1.3,0.01);
+   TwoeVMC b(2,1e6,1.3,1);
 
     //b.findoptParameter();
-    b.MCH(c, v);
+   //b.MCH(c, v);
     //b.MonteCarlo();
-   //VMC a(2,100000,1.3,1);
+   VMC a(6,100000,1.3,1);
    //a.MCH();
+   a.MonteCarlo();
+
+
 
     //cout << endl;
     /*mat A(2, 2, fill::randu);
@@ -45,7 +48,6 @@ int main(int argc, char *argv[])
     //float diff ((float)t2-(float)t1);
     //float seconds = diff / CLOCKS_PER_SEC;
      //cout<<seconds<<endl;
-
 
 
 

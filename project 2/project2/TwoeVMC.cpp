@@ -24,10 +24,10 @@ TwoeVMC::TwoeVMC(int n, int cycles, double step, double w)
     m_w=w;
     //m_rold.zeros(m_nelectrons,2);
     //m_rnew.zeros(m_nelectrons,2);
-    m_dt=0.001;
+    m_dt=0.01;
     m_a=1;
     m_localEn=zeros<vec>(2);
-    m_varpar={0.911,0.203}; //0=alpha, 1 =beta
+    m_varpar={1,0.4}; //0=alpha, 1 =beta
 
 
 
@@ -53,36 +53,33 @@ double TwoeVMC::wavefunction(mat &r){
 
 }
 
-mat TwoeVMC::Quantumforce(mat &r){
-    mat F=zeros(m_nelectrons,2);
+vec TwoeVMC::Quantumforce(int i,mat &r){
+    vec F=zeros<vec>(2);
 
 
 
-    for(int i=0;i<m_nelectrons;i++){
-        for(int k=0;k<2;k++){
-            double spart=-1.0*r(i,k)*m_varpar(0);
 
-            double jpart=0;
+    for(int k=0;k<2;k++){
+        double spart=-1.0*r(i,k)*m_varpar(0);
 
-            for(int j=0;j<m_nelectrons;j++){
-                if(i!=j){
+        double jpart=0;
 
-                    double r_ij=relDis(r,i, j);
 
-                    jpart +=m_a*(r(i,k)-r(j,k))/(r_ij*pow(1+m_varpar(1)*r_ij,2));
 
-               }
-              }
+        double r_12=relDis(r,0, 1);
 
-            F(i,k)=2.0*(spart+jpart);
+        jpart =m_a*(r(0,k)-r(1,k))/(r_12*pow(1+m_varpar(1)*r_12,2));
 
+
+
+        if(i==0){
+            F(k)=2.0*(spart+jpart);
+        }
+        else{
+            F(k)=2.0*(spart-jpart);
 
         }
     }
-
-
-
-
 
      return F;
 }
@@ -195,7 +192,20 @@ void TwoeVMC::MCH(int c, char **v){
     fileout.append(".txt");
     outFile.open(fileout, ios::out);
 
-    if ( MyRank == 0){position.open("pos.dat",ios::out);}
+
+    string filename2 = "pos"; // first command line argument after name of program
+    string fileout2 = filename2;
+    string argument2 = to_string(m_w);
+    fileout2.append(argument2);
+    fileout2.append(".txt");
+
+
+
+
+
+
+
+    if ( MyRank == 0){position.open(fileout2,ios::out);}
 
     double TotalEnergy=0;
     double TotalEnergy2=0;
@@ -228,39 +238,53 @@ void TwoeVMC::MCH(int c, char **v){
         }
     }
     rnew=rold;
+    wfold=wavefunction(rold);
+
+
 
 
 
     for(int n=0;n<m_cycles;n++){
-        wfold=wavefunction(rold);
-        mat Qforceold=Quantumforce(rold);
-
-
 
         for(int i=0;i<m_nelectrons;i++){
+            vec Qforceold=Quantumforce(i,rold);
+
+
+
+
             for(int j=0;j<2;j++){
-                rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
+                rnew(i,j)=rold(i,j)+0.5*Qforceold(j)*m_dt+norm(gen)*sqrt(m_dt);
 
           }
 
 
 
 
+
             wfnew=wavefunction(rnew);
-            mat Qforcenew=Quantumforce(rnew);
+            mat Qforcenew=Quantumforce(i,rnew);
             double G=0;
+            double gexp = 0;
             for(int j=0; j<2;j++){
-              G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
+                double term1 = - (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j))*
+                                        (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j));
+                double term2 =   (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j))*
+                                        (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j));
+
+                gexp += term1+term2;
+
+
+
+
             }
-            G=exp(G);
+            G=exp(gexp/(2.0*m_dt));//gexp/(2.0*m_dt)
           //cout<<(wfnew*wfnew)/(wfold*wfold)<<endl;
-            if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){                       //exp(m_varpar(0)*m_w*(pos2(rold,0)+pos2(rold,1)-pos2(rnew,0)-pos2(rnew,1)))
+            if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){
                 accept++;
                 for(int j=0;j<2;j++){
                     rold(i,j)=rnew(i,j);
 
                 }
-                Qforceold=Qforcenew;
                 wfold=wfnew;
 
             }
@@ -297,12 +321,13 @@ void TwoeVMC::MCH(int c, char **v){
 
     if ( MyRank == 0) {
         double Energy = TotalEnergy/( (double)NumberProcesses*m_cycles*m_nelectrons);
-        double Variance = TotalEnergy2/( (double)NumberProcesses*m_cycles*m_nelectrons)-Energy*Energy;
-        double StandardDeviation = sqrt(Variance/((double)NumberProcesses*m_cycles*m_nelectrons)); // over optimistic error
+        double Energy2=TotalEnergy2/( (double)NumberProcesses*m_cycles*m_nelectrons);
+        double variance=(Energy2-Energy*Energy)/( (double)NumberProcesses*m_cycles*m_nelectrons);
+
 
         cout << Energy << endl;
-        cout<< Variance <<  endl;
-        cout<< StandardDeviation << endl;
+        cout << variance<<endl;
+
         cout<<(double)accept/(m_cycles*m_nelectrons)*100<<endl;
         cout<< m_varpar(0)<<endl;
         cout<<m_varpar(1)<<endl;
@@ -358,11 +383,12 @@ void TwoeVMC::MonteCarlo(){
         }
     }
     rnew=rold;
+    wfold=wavefunction(rold);
 
 
 
     for(int n=0;n<m_cycles;n++){
-        wfold=wavefunction(rold);
+
 
         for(int i=0;i<m_nelectrons;i++){
             for(int j=0;j<2;j++){
@@ -462,11 +488,12 @@ void TwoeVMC::findoptParameter(){
 
         for(int n=0;n<cycles;n++){
             wfold=wavefunction(rold);
-            mat Qforceold=Quantumforce(rold);
+
 
             for(int i=0;i<m_nelectrons;i++){
+                vec Qforceold=Quantumforce(i,rold);
                 for(int j=0;j<2;j++){
-                    rnew(i,j)=rold(i,j)+0.5*Qforceold(i,j)*m_dt+norm(gen)*sqrt(m_dt);
+                    rnew(i,j)=rold(i,j)+0.5*Qforceold(j)*m_dt+norm(gen)*sqrt(m_dt);
 
               }
 
@@ -474,10 +501,10 @@ void TwoeVMC::findoptParameter(){
 
 
                 wfnew=wavefunction(rnew);
-                mat Qforcenew=Quantumforce(rnew);
+                vec Qforcenew=Quantumforce(i,rnew);
                 double G=0;
                 for(int j=0; j<2;j++){
-                  G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));
+                  G += 0.5*m_dt*(Qforceold(j)*Qforceold(j)-Qforcenew(j)*Qforcenew(j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(j)+Qforcenew(j));
                 }
                 G=exp(G);
 
