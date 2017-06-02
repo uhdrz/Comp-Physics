@@ -174,11 +174,13 @@ void TwoeVMC::test(){
 
 void TwoeVMC::MCH(int c, char **v){
     int NumberProcesses, MyRank;
-    //cout<<c;
+
 
     MPI_Init (&c, &v);
     MPI_Comm_size (MPI_COMM_WORLD, &NumberProcesses);
     MPI_Comm_rank (MPI_COMM_WORLD, &MyRank);
+
+
     ofstream outFile;
     ofstream position;
 
@@ -188,7 +190,8 @@ void TwoeVMC::MCH(int c, char **v){
     string filename = "mc"; // first command line argument after name of program
     string fileout = filename;
     string argument = to_string(MyRank);
-    fileout.append(m_w);
+    string argument3=to_string(m_w);
+    fileout.append(argument3);
     fileout.append(argument);
     fileout.append(".txt");
     outFile.open(fileout, ios::out);
@@ -334,10 +337,7 @@ void TwoeVMC::MCH(int c, char **v){
         cout<<m_varpar(1)<<endl;
 
     }
-    /*double Energy = processEnergy/( (double)m_cycles);
-    double Variance = processEnergy2/( (double)m_cycles)-Energy*Energy;
-    cout << Energy << endl;
-    cout<< Variance <<  endl;*/
+
 
 
 
@@ -347,15 +347,16 @@ void TwoeVMC::MCH(int c, char **v){
 
     fflush(stdout);
     outFile.close();
-
     MPI_Finalize ();
+
+
 
 
 
 
 }
 
-void TwoeVMC::MonteCarlo(){
+void TwoeVMC::MCbrute(){
 
 
     random_device rnd;
@@ -440,21 +441,24 @@ void TwoeVMC::MonteCarlo(){
 }
 
 void TwoeVMC::findoptParameter(){
-    int updates=10000;
-    int cycles=1000000;
+
+
+
+    int updates=1000;
+    int cycles=100000;
     vec dE=zeros<vec>(2);
     double tolerance = 1.0e-14;
-    vec parold={1,0.5};
+    vec parold=m_varpar;
     vec parnew=zeros<vec>(2);
     double diff=0;
-    double step=1;
+    double step=0.5;
 
-    vec expVal=zeros<vec>(5); //0=en, 1,2=psi
+    //double TotalEnergy=0;
 
-
-
-
-
+    /*double TotalPsia=0;
+    double TotalPsib=0;
+    double TotalPsiEa=0;
+    double TotalPsiEb=0;*/
 
 
     random_device rnd;
@@ -465,34 +469,43 @@ void TwoeVMC::findoptParameter(){
 
 
 
-    mat rold=zeros<mat>(m_nelectrons,2);
-    mat rnew=zeros<mat>(m_nelectrons,2);
-    double wfold=0;
-    double wfnew=0;
+
+
+    for(int u=0;u<updates;u++){
+        double processEnergy=0;
+        double processPsia=0;
+        double processPsib=0;
+        double processPsiEa=0;
+        double processPsiEb=0;
+
+        mat rold=zeros<mat>(m_nelectrons,2);
+        mat rnew=zeros<mat>(m_nelectrons,2);
+        double wfold=0;
+        double wfnew=0;
 
 
 
 
-    m_varpar=parold;
-
-
-    for( int m=0; m<updates; m++ ){
-        vec sumPsi=zeros<vec>(5); //0=en, 1,2=psi
         for(int i=0;i<m_nelectrons;i++){
             for(int j=0;j<2;j++){
                 rold(i,j)=norm(gen)*sqrt(m_dt);
             }
         }
         rnew=rold;
+        wfold=wavefunction(rold);
+
+
 
 
 
         for(int n=0;n<cycles;n++){
-            wfold=wavefunction(rold);
-
 
             for(int i=0;i<m_nelectrons;i++){
                 vec Qforceold=Quantumforce(i,rold);
+
+
+
+
                 for(int j=0;j<2;j++){
                     rnew(i,j)=rold(i,j)+0.5*Qforceold(j)*m_dt+norm(gen)*sqrt(m_dt);
 
@@ -501,20 +514,32 @@ void TwoeVMC::findoptParameter(){
 
 
 
-                wfnew=wavefunction(rnew);
-                vec Qforcenew=Quantumforce(i,rnew);
-                double G=0;
-                for(int j=0; j<2;j++){
-                  G += 0.5*m_dt*(Qforceold(j)*Qforceold(j)-Qforcenew(j)*Qforcenew(j))+0.5*(rold(i,j)-rnew(i,j))*(Qforceold(j)+Qforcenew(j));
-                }
-                G=exp(G);
 
+                wfnew=wavefunction(rnew);
+                mat Qforcenew=Quantumforce(i,rnew);
+                double G=0;
+                double gexp = 0;
+                for(int j=0; j<2;j++){
+                    double term1 = - (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j))*
+                                            (rold(i,j) - rnew(i,j)  -  0.5*m_dt*Qforcenew(j));
+                    double term2 =   (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j))*
+                                            (-rold(i,j) + rnew(i,j) - 0.5*m_dt*Qforceold(j));
+
+                    gexp += term1+term2;
+
+
+
+
+                }
+                G=exp(gexp/(2.0*m_dt));//gexp/(2.0*m_dt)
+              //cout<<(wfnew*wfnew)/(wfold*wfold)<<endl;
                 if(uni(gen)<=G*(wfnew*wfnew)/(wfold*wfold)){
+
                     for(int j=0;j<2;j++){
                         rold(i,j)=rnew(i,j);
-                        wfold=wfnew;
+
                     }
-                    Qforceold=Qforcenew;
+                    wfold=wfnew;
 
                 }
                 else{
@@ -522,29 +547,62 @@ void TwoeVMC::findoptParameter(){
                         rnew(i,j)=rold(i,j);
                     }
                 }
+                double temp=localEnergyana(rold);
+                double r12=relDis(rold,0,1);
+                double den=1/(1+m_varpar(1)*r12);
+
+                processEnergy+=temp;
+                double tempPsia=-0.5*m_w*(pos2(rold,0)+pos2(rold,1));
+                double tempPsib=-m_a*r12*r12*den*den;
+                processPsia+=tempPsia;
+                processPsib+=tempPsib;
+                processPsiEa+=tempPsia*temp;
+                processPsiEb+=tempPsib*temp;
+
+
 
 
             }
-            double r12=relDis(rnew, 0,1);
-            double den=1/(1+m_varpar(1)*r12);
-            double temp=localEnergyana(rnew);//0.5*m_w*m_w*(pos2(rnew,0)+pos2(rnew,1))*(1-m_varpar(0)*m_varpar(0))+2*m_varpar(0)*m_w+1/r12;
 
 
 
 
-            double tempPsia=-0.5*m_w*(pos2(rnew,0)+pos2(rnew,1));
-            double tempPsib=-m_a*r12*r12*den*den;
-            sumPsi(0)+=temp;
-            sumPsi(2)+=tempPsib;
-            sumPsi(1)+=tempPsia;
-            sumPsi(3)+=tempPsia*temp;
-            sumPsi(4)+=tempPsib*temp;
+
+
 
 
         }
 
 
 
+        /*MPI_Reduce(&processEnergy, &TotalEnergy, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&processPsia, &TotalPsia, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&processPsib, &TotalPsib, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&processPsiEa, &TotalPsiEa, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        MPI_Reduce(&processPsiEb, &TotalPsiEb, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);*/
+
+
+
+
+        double Energy = processEnergy/( (double)cycles*m_nelectrons);
+        double Psia=processPsia/( (double)cycles*m_nelectrons);
+        double Psib=processPsib/( (double)cycles*m_nelectrons);
+        double PsiEa=processPsiEa/( (double)cycles*m_nelectrons);
+        double PsiEb=processPsiEb/( (double)cycles*m_nelectrons);
+
+
+
+         dE(0)=2*(PsiEa-Psia*Energy);
+         dE(1)=2*(PsiEb-Psib*Energy);
+         parnew=parold-step*dE;
+
+
+          m_varpar=parnew;
+          parold=parnew;
+
+
+
+          diff= sqrt(dot(parnew-parold,parnew-parold));
 
 
 
@@ -552,24 +610,14 @@ void TwoeVMC::findoptParameter(){
 
 
 
-        expVal=sumPsi/(cycles);
 
 
-
-
-        dE(0)=2*(expVal(3)-expVal(1)*expVal(0));
-        dE(1)=2*(expVal(4)-expVal(2)*expVal(0));
-        parnew=parold-step*dE;
-
-
-        m_varpar=parnew;
-        parold=parnew;
-
-
-
-        diff= sqrt(dot(parnew-parold,parnew-parold));
         if(diff<tolerance){ break;}
-        else{parold=parnew;}
+
+
+
+    }
+    m_varpar.print();
 
 
 
@@ -577,14 +625,6 @@ void TwoeVMC::findoptParameter(){
 
 
 
-
-
-}
-
-
-
-    //cout<<m_varpar(0)<<endl;
-    //cout<<m_varpar(1);
 
 
 

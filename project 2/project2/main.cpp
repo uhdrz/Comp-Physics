@@ -13,36 +13,33 @@ using namespace arma;
 using namespace std;
 
 int main(int argc, char *argv[])
-{       int c=argc;
-        char** v=argv;
+{
+
+    int c=argc;
+    char **v=argv;
+
+
 
     //clock_t t1,t2;
     //t1=clock();
 
-   TwoeVMC b(2,1e6,1.3,1);
 
+
+    //TwoeVMC b(2,1e6,1.3,0.5);
     //b.findoptParameter();
-   //b.MCH(c, v);
-    //b.MonteCarlo();
-   VMC a(12,100000,1.3,1);
-   a.MCH();
-   //a.MonteCarlo();
+    //b.MCH(c,v);
 
 
 
-    //cout << endl;
-    /*mat A(2, 2, fill::randu);
-    VMC a(2,1000000,1.3,1);
-    TwoeVMC b(2,10000,1.3,1);
-    double wf1=a.wavefunction(A);
-    double wf2=b.wavefunction(A);
+
+    VMC a(12,500000,1.3,1);
+    a.findoptParameter();
+    //a.MCH(c, v);
 
 
-    cout<< wf1<<" "<< wf2;*/
-    //A.print();
-     //b.MCH();
-   // a.MonteCarlo();
-    //b.findoptParameter();
+
+
+
 
     //t2=clock();
     //float diff ((float)t2-(float)t1);

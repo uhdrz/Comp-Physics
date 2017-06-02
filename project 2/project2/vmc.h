@@ -23,6 +23,7 @@ public:
     vec GradSP(int i, mat &r, mat &InvUp, mat &InvDown);
     vec DerivSP(int i, int nx, int ny, mat &r);
     double Deriv2SP(int i, int nx, int ny, mat &r);
+    double DerivSPA(int i,int nx,int ny, mat &r);
 
     double LapJastrow(int k, mat &r);//
     double LapSP(int i , mat &r, mat &InvUp, mat &InvDown);
@@ -33,7 +34,9 @@ public:
     mat SlaterDownInv(mat &Slaterdown);
     double derivJastrow(int i, int j, double rij);
     double deriv2Jastrow(int i, int j, double rij);
-    void MonteCarlo();
+    void MCbrute();
+    double DerivAlpha( mat &r, mat &InvUp, mat &InvDown);
+    double DerivBeta( mat &r);
 
 
 
@@ -48,11 +51,8 @@ public:
     double m_step;
     vec m_a;
     double m_dt;
-    vec m_localEn;
     vec m_varpar;
 
-    mat m_invUp;
-    mat m_invDown;
 
 };
 
