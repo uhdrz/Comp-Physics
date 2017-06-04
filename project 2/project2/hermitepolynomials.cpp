@@ -1,6 +1,8 @@
 #include "hermitepolynomials.h"
 #include <cmath>
 
+//provided by Håkon
+
 double HermitePolynomials::evaluate(int n, double x, double omega, double alpha) {
 
     if(n == 0) {
