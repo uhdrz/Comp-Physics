@@ -17,6 +17,8 @@ public:
     double wavefunction (mat &r,mat &Slaterup, mat &Slaterdown);
     double spwf (double x, double y, int nx, int ny);
     double localEnergy(mat &r, mat &InvUp, mat &InvDown);
+    double locKin(mat &r, mat &InvUp, mat &InvDown);
+    double locPot(mat &r);
 
 
     vec GradJastrow(int k, mat &r); //

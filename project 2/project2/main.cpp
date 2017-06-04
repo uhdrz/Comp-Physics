@@ -20,8 +20,7 @@ int main(int argc, char *argv[])
 
 
 
-    //clock_t t1,t2;
-    //t1=clock();
+
 
 
 
@@ -32,19 +31,15 @@ int main(int argc, char *argv[])
 
 
 
-    VMC a(12,500000,1.3,1);
-    a.findoptParameter();
-    //a.MCH(c, v);
+    VMC a(6,1000000,1.3,1);
+    //a.findoptParameter();
+    a.MCH(c, v);
 
 
 
 
 
 
-    //t2=clock();
-    //float diff ((float)t2-(float)t1);
-    //float seconds = diff / CLOCKS_PER_SEC;
-     //cout<<seconds<<endl;
 
 
 

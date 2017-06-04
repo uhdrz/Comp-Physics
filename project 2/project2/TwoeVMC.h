@@ -25,7 +25,7 @@ public:
     vec Quantumforce(int i, mat &r);
     void MCH(int c,char **v);
     void test();
-    void MonteCarlo();
+    void MCbrute();
     //mat m_rold;
     //mat m_rnew;
     int m_cycles;

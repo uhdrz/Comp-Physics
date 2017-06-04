@@ -19,7 +19,7 @@ VMC::VMC(int n, int cycles, double step, double w)
     m_w=w;
     m_dt=0.01;
     m_a={1,1.0/3};  //0 for antipar
-    m_varpar={1.1, 0.48}; //0=alpha, 1 =beta
+    m_varpar={1,0.4}; //0=alpha, 1 =beta
 
 
 
@@ -45,7 +45,7 @@ vec VMC::postonum(int i){
 
 }
 
-double VMC::spwf(double x, double y, int nx, int ny){
+double VMC::spwf(double x, double y, int nx, int ny){  //set up for harmonic wf
 
     const double Hnx = HermitePolynomials::evaluate(nx,x,m_w,m_varpar(0));
     const double Hny = HermitePolynomials::evaluate(ny,y,m_w,m_varpar(0));
@@ -56,7 +56,7 @@ double VMC::spwf(double x, double y, int nx, int ny){
     return phi;
 }
 
-mat VMC::Slatermatrixup(mat &r){
+mat VMC::Slatermatrixup(mat &r){ //set up for the Slater matrix for Spin up
     int n_states= m_nelectrons/2; //Spin separatly
 
     mat Slaterup = zeros(n_states,n_states);
@@ -105,7 +105,7 @@ mat VMC::SlaterDownInv(mat &Slaterdown){
     return SlaterInv;
 }
 
-double VMC::wavefunction(mat &r, mat &Slaterup, mat &Slaterdown){
+double VMC::wavefunction(mat &r, mat &Slaterup, mat &Slaterdown){ // set up for the entire wf
 
     double Slaterdet = det(Slaterup)*det(Slaterdown);
     double jastrow=1;
@@ -129,7 +129,7 @@ double VMC::wavefunction(mat &r, mat &Slaterup, mat &Slaterdown){
 
 }
 
-vec VMC::GradJastrow(int k, mat &r){
+vec VMC::GradJastrow(int k, mat &r){ // calculation for the gradient of the Jastrow factor
 
     vec deriv=zeros<vec>(2);
 
@@ -149,7 +149,7 @@ vec VMC::GradJastrow(int k, mat &r){
 
 }
 
-double VMC::derivJastrow(int i, int j, double rij){
+double VMC::derivJastrow(int i, int j, double rij){  // first derivative of the exponent of jastrow
     int n_states=m_nelectrons/2;
     double deriv=0;
 
@@ -163,7 +163,7 @@ double VMC::derivJastrow(int i, int j, double rij){
     return deriv;
 }
 
-double VMC::deriv2Jastrow(int i, int j, double rij){
+double VMC::deriv2Jastrow(int i, int j, double rij){ // second derivative of the exponent of jastrow
 
     int n_states=m_nelectrons/2;
     double deriv2=0;
@@ -210,7 +210,7 @@ double VMC::LapJastrow(int k, mat &r){
 
 }
 
-vec VMC::GradSP(int i, mat &r, mat &InvUp, mat &InvDown){
+vec VMC::GradSP(int i, mat &r, mat &InvUp, mat &InvDown){ // Gradient for the space part
 
 
     vec Grad=zeros<vec>(2);
@@ -237,7 +237,7 @@ vec VMC::GradSP(int i, mat &r, mat &InvUp, mat &InvDown){
 
 }
 
-vec VMC::DerivSP(int i,int nx,int ny, mat &r) {
+vec VMC::DerivSP(int i,int nx,int ny, mat &r) { // first derivative for the harmonic wf
 
     const double x = r(i,0);
     const double y = r(i,1);
@@ -320,7 +320,7 @@ double VMC::LapSP(int i ,mat &r, mat &InvUp, mat &InvDown){
 
 }
 
-double VMC::DerivSPA(int i,int nx,int ny, mat &r){
+double VMC::DerivSPA(int i,int nx,int ny, mat &r){ // derivative of harmonic wf after alpha
     double deriv=0;
     const double x = r(i,0);
     const double y = r(i,1);
@@ -338,7 +338,7 @@ double VMC::DerivSPA(int i,int nx,int ny, mat &r){
 
 }
 
-double VMC::DerivAlpha( mat &r, mat &InvUp, mat &InvDown){
+double VMC::DerivAlpha( mat &r, mat &InvUp, mat &InvDown){ // whole derivative after alpha
     double deriv=0;
     int n_states= m_nelectrons/2;
     for(int i=0; i<m_nelectrons;i++){
@@ -362,7 +362,7 @@ double VMC::DerivAlpha( mat &r, mat &InvUp, mat &InvDown){
     return deriv;
 }
 
-double VMC::DerivBeta( mat &r){
+double VMC::DerivBeta( mat &r){   // whole derivative after beta
     double jastrowb=0;
     int n_states= m_nelectrons/2;
 
@@ -387,8 +387,7 @@ double VMC::DerivBeta( mat &r){
 
 }
 
-double VMC::localEnergy(mat &r, mat &InvUp, mat &InvDown){
-
+double VMC::locPot(mat &r){  //Potential part of the local energy
     double Pot=0;
     for(int i=0;i<m_nelectrons;i++){
         Pot+=0.5*m_w*m_w*pos2(r,i);
@@ -396,6 +395,10 @@ double VMC::localEnergy(mat &r, mat &InvUp, mat &InvDown){
             Pot+=1.0/relDis(r,i,j);
         }
     }
+    return Pot;
+}
+
+double VMC::locKin(mat &r, mat &InvUp, mat &InvDown){ // kinetic part of the loca lenergy
     double Kin  = 0;
     double KinJ = 0;
 
@@ -403,14 +406,7 @@ double VMC::localEnergy(mat &r, mat &InvUp, mat &InvDown){
         Kin  += -0.5*LapSP(i,r,InvUp,InvDown);
         KinJ += -0.5*(LapJastrow(i,r)+2*dot(GradSP(i,r,InvUp,InvDown),GradJastrow(i,r)));//
     }
-
-
-    double locEnergy=Kin+Pot+KinJ;
-
-    //cout << locEnergy << " " << locEnergy-KinJ << " " << KinJ << endl;
-
-    return locEnergy;
-
+    return Kin+KinJ;
 
 }
 
@@ -438,6 +434,10 @@ void VMC::MCH(int c, char **v){
     MPI_Init (&c, &v);
     MPI_Comm_size (MPI_COMM_WORLD, &NumberProcesses);
     MPI_Comm_rank (MPI_COMM_WORLD, &MyRank);
+    double StartTime = MPI_Wtime();
+    double StartTime1 = MPI_Wtime();
+
+
     ofstream outFile;
     ofstream position;
 
@@ -470,8 +470,12 @@ void VMC::MCH(int c, char **v){
 
 
     double TotalEnergy=0;
-
     double processEnergy=0;
+    double TotalKin=0;
+    double processKin=0;
+    double TotalPot=0;
+    double processPot=0;
+
 
 
 
@@ -514,14 +518,14 @@ void VMC::MCH(int c, char **v){
 
 
 
-        //nt i = rand() % m_nelectrons;
+
         for(int i=0; i < m_nelectrons; i++) {
         vec Qforceold=Quantumforce(i,rold,SlaterInvUpOld,SlaterInvDownOld);
-            //cout << i << endl;
 
 
 
-            //for(int i=0;i<m_nelectrons;i++){
+
+
 
             for(int j=0;j<2;j++) {
                 rnew(i,j)=rold(i,j)+0.5*Qforceold(j)*m_dt+norm(gen)*sqrt(m_dt);
@@ -548,8 +552,7 @@ void VMC::MCH(int c, char **v){
 
                 gexp += term1+term2;
 
-                /*G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))
-                        +0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));*/
+
             }
 
             G=exp(gexp/(2.0*m_dt));
@@ -585,26 +588,38 @@ void VMC::MCH(int c, char **v){
 
             }
 
-            double temp=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
+            double temp=locPot(rold)+locKin(rold,SlaterInvUpOld,SlaterInvDownOld);
+            double temp1=locPot(rold);
+            double temp2=locKin(rold,SlaterInvUpOld,SlaterInvDownOld);
+
 
             processEnergy+=temp;
+            processKin+=temp2;
+            processPot+=temp1;
 
             outFile << temp << endl;
         }
         if ( MyRank == 0){rnew.print(position);}
 
     }
+    double EndTime1 = MPI_Wtime();
 
 
 
     MPI_Reduce(&processEnergy, &TotalEnergy, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&processPot, &TotalPot, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&processKin, &TotalKin, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
 
 
     if ( MyRank == 0) {
         double Energy = TotalEnergy/( (double)NumberProcesses*m_cycles*m_nelectrons);
+        double Kin = TotalKin/( (double)NumberProcesses*m_cycles*m_nelectrons);
+        double Pot = TotalPot/( (double)NumberProcesses*m_cycles*m_nelectrons);
 
         cout << Energy << endl;
+        cout << Kin << endl;
+        cout << Pot << endl;
         cout<<(double)accept/(m_cycles*m_nelectrons)*100<<endl;
         cout<< m_varpar(0)<<endl;
         cout<< m_varpar(1)<<endl;
@@ -612,8 +627,20 @@ void VMC::MCH(int c, char **v){
         //
 
     }
-    /*double Energy = processEnergy/( (double)m_cycles*m_nelectrons);
-    cout << Energy << endl;*/
+
+
+
+    double EndTime = MPI_Wtime();
+    double TotalTime = EndTime-StartTime;
+
+    double TotalTime1= EndTime1-StartTime1;
+    if ( MyRank == 0 ){
+
+        cout << " total Time = " << TotalTime<<endl;
+        cout << "process Time = " << TotalTime1<<endl;
+
+    }
+
 
 
 
@@ -688,8 +715,8 @@ void VMC::MCbrute(){
 
 
          wfnew=wavefunction(rnew,SlaterUpNew,SlaterDownNew);
-          //cout<<(wfnew*wfnew)/(wfold*wfold)<<endl;
-            if(dis1(gen)<=(wfnew*wfnew)/(wfold*wfold)){                       //exp(m_varpar(0)*m_w*(pos2(rold,0)+pos2(rold,1)-pos2(rnew,0)-pos2(rnew,1)))
+
+            if(dis1(gen)<=(wfnew*wfnew)/(wfold*wfold)){
                 accept++;
                 for(int j=0;j<2;j++){
                     rold(i,j)=rnew(i,j);
@@ -711,8 +738,8 @@ void VMC::MCbrute(){
 
             mat SlaterInvUpOld=SlaterUpInv(SlaterUpOld);
             mat SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
-            double temp=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
-            //cout<<temp<<endl;
+            double temp=locKin(rold,SlaterInvUpOld,SlaterInvDownOld)+locPot(rold);
+
             sum+=temp;
             sumsquared+=temp*temp;
 
@@ -742,13 +769,13 @@ void VMC::findoptParameter(){
 
 
     int updates=1000;
-    int cycles=100000;
+    int cycles=10000;
     vec dE=zeros<vec>(2);
     double tolerance = 1.0e-14;
     vec parold=m_varpar;
     vec parnew=zeros<vec>(2);
     double diff=0;
-    double step=0.1;
+    double step=0.01;
 
 
 
@@ -825,8 +852,7 @@ void VMC::findoptParameter(){
 
                     gexp += term1+term2;
 
-                    /*G += 0.5*m_dt*(Qforceold(i,j)*Qforceold(i,j)-Qforcenew(i,j)*Qforcenew(i,j))
-                            +0.5*(rold(i,j)-rnew(i,j))*(Qforceold(i,j)+Qforcenew(i,j));*/
+
                 }
 
                 G=exp(gexp/(2.0*m_dt));
@@ -861,7 +887,7 @@ void VMC::findoptParameter(){
                     SlaterInvDownOld=SlaterUpInv(SlaterDownOld);
 
                 }
-                double temp=localEnergy(rold,SlaterInvUpOld,SlaterInvDownOld);
+                double temp=locKin(rold,SlaterInvUpOld,SlaterInvDownOld)+locPot(rold);
                 double tempPsia=DerivAlpha(rold,SlaterInvUpOld,SlaterInvDownOld);
                 double tempPsib=DerivBeta(rold);
                 processEnergy+=temp;
@@ -923,7 +949,6 @@ void VMC::findoptParameter(){
 
     }
 
-    m_varpar.print();
 
 
 
